@@ -11,6 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
   <style>
     :root {
       --bg: #030507;
@@ -857,7 +858,8 @@
     .mini-list {
       flex: 1;
       overflow-y: auto;
-      padding: 0.5rem
+      padding: 0.5rem;
+      min-height: 0
     }
 
     .mini-list::-webkit-scrollbar {
@@ -916,9 +918,124 @@
       margin-top: 0.1rem
     }
 
+    .ad-wrap {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      padding: 0.5rem
+    }
+
+    .ad-outer-container {
+      position: relative;
+      width: 100%;
+      height: 130px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .ad-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      text-align: center;
+      box-sizing: border-box;
+      z-index: 1
+    }
+
+    .ad-placeholder p {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-bottom: 0.4rem;
+      font-family: var(--mono);
+      line-height: 1.5
+    }
+
+    .btn-guide-open {
+      font-size: 10px;
+      color: var(--cyan);
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--mono)
+    }
+
+    .ad-content-area {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+      height: 130px;
+      overflow: hidden;
+      transform: scale(0.433);
+      transform-origin: top left;
+      width: 230px
+    }
+
+    #ad-guide-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1500;
+      align-items: center;
+      justify-content: center
+    }
+
+    .ad-modal-body {
+      background: var(--bg-2);
+      padding: 1.5rem;
+      border-radius: 12px;
+      max-width: 90%;
+      width: 360px;
+      border: 1px solid var(--border-2)
+    }
+
+    .ad-modal-body h3 {
+      font-family: var(--cond);
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem
+    }
+
+    .ad-modal-body p {
+      font-size: 0.8rem;
+      color: var(--text-2);
+      line-height: 1.6
+    }
+
+    .ad-modal-close {
+      width: 100%;
+      padding: 0.65rem;
+      background: var(--cyan);
+      border: none;
+      color: var(--bg);
+      border-radius: 8px;
+      margin-top: 1rem;
+      cursor: pointer;
+      font-family: var(--cond);
+      font-weight: 700;
+      font-size: 0.9rem
+    }
+
     #map {
       width: 100%;
-      height: 100%
+      height: 100%;
+      background: #000
+    }
+
+    .leaflet-container {
+      background: #000 !important
     }
 
     .leaflet-control-zoom {
@@ -1396,16 +1513,6 @@
       }
     }
 
-    .wave-label {
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 700;
-      padding: 1px 5px;
-      border-radius: 3px;
-      pointer-events: none;
-      white-space: nowrap
-    }
-
     @media(max-width:920px) {
       .body {
         grid-template-columns: 0 1fr 260px
@@ -1459,7 +1566,7 @@
           <div class="feat-card">
             <div class="feat-icon">🗺️</div>
             <div class="feat-name">リアルタイムマップ</div>
-            <div class="feat-text">震源地を×マーカーで即時反映。クリックで震度分布を都道府県ごとに可視化。</div>
+            <div class="feat-text">震源地を×マーカーで即時反映。クリックで震度分布を細分区域ごとに可視化。</div>
           </div>
           <div class="feat-card">
             <div class="feat-icon">📡</div>
@@ -1479,7 +1586,7 @@
           <div class="feat-card">
             <div class="feat-icon">📊</div>
             <div class="feat-name">詳細サイドパネル</div>
-            <div class="feat-text">リスト選択で左パネルに震源地・震度・M・深さ・時刻を表示。震度分布もマップに反映。</div>
+            <div class="feat-text">リスト選択で左パネルに震源地・M・震度・深さ・時刻を詳細表示。</div>
           </div>
           <div class="feat-card">
             <div class="feat-icon">🔍</div>
@@ -1591,7 +1698,6 @@
           </div>
           <div class="detail-panel hidden" id="detail-panel"></div>
         </div>
-
         <div class="sec">
           <div class="sec-title-row" style="margin-bottom:0.65rem">
             <div class="sec-title">フィルター</div>
@@ -1612,7 +1718,6 @@
             </div>
           </div>
         </div>
-
         <div class="sec" style="border-bottom:none;padding-bottom:0.3rem">
           <div class="sec-title">本日の地震 — アクティビティ</div>
         </div>
@@ -1622,9 +1727,17 @@
             <div class="no-data-txt">データ待機中...</div>
           </div>
         </div>
-        <!-- admax -->
-        <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
-        <!-- admax -->
+        <div class="ad-wrap">
+          <div class="ad-outer-container">
+            <div class="ad-placeholder">
+              <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
+              <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+            </div>
+            <div class="ad-content-area">
+              <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="map"></div>
@@ -1658,6 +1771,14 @@
     </div>
   </div>
 
+  <div id="ad-guide-modal">
+    <div class="ad-modal-body">
+      <h3>広告ブロックの解除方法</h3>
+      <p>お使いのブロッカーのアイコンをクリックし、「このサイトでオフにする」を選択してください。解除後、ページを再読み込みすると広告が表示されます。</p>
+      <button class="ad-modal-close" onclick="closeAdGuide()">閉じる</button>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     'use strict';
@@ -1668,6 +1789,16 @@
     const TODAY = new Date().toDateString();
 
     const UPDATE_LOGS = [
+      {
+        id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
+        title: 'マップ・表示品質アップデート',
+        desc: '以下の修正・改善を行いました。\n\n'
+          + '・発生時刻が「Invalid Date」と表示されるバグを修正\n'
+          + '・マップ背景を完全な黒に変更\n'
+          + '・地図に周辺国（韓国・中国・ロシア等）を表示\n'
+          + '・震度分布を都道府県内の細分区域（浜通り・北部・南部等）レベルで表示\n'
+          + '・サイドバーに広告エリアを追加（広告ブロック対応メッセージ付き）'
+      },
       {
         id: 'v1.1.0', version: 'v1.1.0', date: '2026-04-24',
         title: 'マップ・UX大幅アップデート',
@@ -1699,6 +1830,60 @@
       }
     ];
 
+    const REGION_CENTERS = {
+      '北海道道北': [44.8, 142.4], '北海道道東': [43.8, 144.5], '北海道道央': [43.1, 141.4], '北海道道南': [41.9, 140.7],
+      '北海道石狩': [43.2, 141.4], '北海道後志': [43.0, 140.7], '北海道空知': [43.5, 141.9], '北海道上川': [43.8, 142.6],
+      '北海道留萌': [44.0, 141.8], '北海道宗谷': [45.3, 141.9], '北海道網走': [44.0, 144.3], '北海道十勝': [43.0, 143.2],
+      '北海道釧路': [43.0, 144.4], '北海道根室': [43.3, 145.6], '北海道胆振': [42.7, 141.3], '北海道日高': [42.4, 142.4],
+      '北海道渡島': [41.8, 140.7], '北海道檜山': [42.1, 140.0],
+      '青森県津軽': [40.7, 140.3], '青森県下北': [41.4, 141.1], '青森県三八上北': [40.4, 141.3],
+      '岩手県内陸北部': [39.8, 141.1], '岩手県内陸南部': [39.3, 141.1], '岩手県沿岸北部': [39.9, 141.8], '岩手県沿岸南部': [39.0, 141.7],
+      '宮城県北部': [38.7, 141.0], '宮城県南部': [38.1, 140.9], '宮城県中部': [38.4, 141.0],
+      '秋田県北部': [40.2, 140.4], '秋田県南部': [39.2, 140.6], '秋田県沿岸': [39.7, 140.1],
+      '山形県北部': [38.8, 140.1], '山形県中部': [38.4, 140.2], '山形県南部': [37.9, 140.1], '山形県庄内': [38.9, 139.8],
+      '福島県浜通り': [37.1, 141.0], '福島県中通り': [37.4, 140.4], '福島県会津': [37.4, 139.8],
+      '茨城県北部': [36.7, 140.7], '茨城県南部': [36.1, 140.1],
+      '栃木県北部': [37.0, 139.9], '栃木県南部': [36.3, 139.7],
+      '群馬県北部': [36.8, 138.9], '群馬県南部': [36.3, 139.1],
+      '埼玉県北部': [36.1, 139.5], '埼玉県南部': [35.8, 139.6],
+      '千葉県北西部': [35.7, 140.0], '千葉県北東部': [35.8, 140.6], '千葉県南部': [35.1, 140.1],
+      '東京都23区': [35.7, 139.7], '東京都多摩東部': [35.6, 139.4], '東京都多摩西部': [35.6, 139.1], '東京都伊豆諸島': [34.0, 139.4],
+      '神奈川県東部': [35.5, 139.6], '神奈川県西部': [35.4, 139.1],
+      '新潟県上越': [37.1, 138.2], '新潟県中越': [37.4, 138.8], '新潟県下越': [37.9, 139.1], '新潟県佐渡': [38.0, 138.4],
+      '富山県東部': [36.7, 137.5], '富山県西部': [36.7, 136.9],
+      '石川県能登': [37.1, 136.9], '石川県加賀': [36.4, 136.5],
+      '福井県嶺北': [36.1, 136.2], '福井県嶺南': [35.6, 135.9],
+      '山梨県東部・富士五湖': [35.5, 138.8], '山梨県中・西部': [35.6, 138.4],
+      '長野県北部': [36.9, 138.2], '長野県中部': [36.2, 138.0], '長野県南部': [35.8, 137.8], '長野県東部・北部': [36.4, 138.4],
+      '岐阜県北部': [36.2, 137.1], '岐阜県南部': [35.5, 136.8],
+      '静岡県伊豆': [34.9, 138.9], '静岡県東部': [35.1, 138.7], '静岡県中部': [34.9, 138.4], '静岡県西部': [34.9, 137.8],
+      '愛知県西部': [35.2, 136.8], '愛知県東部': [35.0, 137.2],
+      '三重県北部': [35.0, 136.5], '三重県中部': [34.4, 136.3], '三重県南部': [33.8, 136.1],
+      '滋賀県北部': [35.5, 136.1], '滋賀県南部': [34.9, 135.9],
+      '京都府北部': [35.5, 135.4], '京都府南部': [34.9, 135.8],
+      '大阪府北部': [34.9, 135.6], '大阪府南部': [34.4, 135.4],
+      '兵庫県北部': [35.4, 134.8], '兵庫県南部': [34.7, 135.2], '兵庫県淡路島': [34.4, 134.9],
+      '奈良県北部': [34.7, 135.8], '奈良県南部': [34.2, 135.9],
+      '和歌山県北部': [34.3, 135.4], '和歌山県南部': [33.8, 135.5],
+      '鳥取県東部': [35.5, 134.2], '鳥取県中部': [35.5, 133.7], '鳥取県西部': [35.4, 133.3],
+      '島根県東部': [35.4, 133.1], '島根県西部': [34.9, 132.0], '島根県隠岐': [36.1, 133.1],
+      '岡山県北部': [35.1, 133.9], '岡山県南部': [34.7, 134.0],
+      '広島県北部': [34.8, 133.0], '広島県南部': [34.3, 132.5],
+      '山口県北部': [34.4, 131.5], '山口県南部': [34.0, 131.5], '山口県東部': [34.1, 131.9], '山口県西部': [33.9, 130.9],
+      '徳島県北部': [34.2, 134.4], '徳島県南部': [33.7, 134.2],
+      '香川県東部': [34.4, 134.3], '香川県西部': [34.2, 133.5],
+      '愛媛県東部': [34.1, 132.9], '愛媛県中予': [33.8, 132.8], '愛媛県西部': [33.5, 132.4],
+      '高知県東部': [33.7, 134.2], '高知県中部': [33.5, 133.5], '高知県西部': [33.2, 132.8],
+      '福岡県北西部': [33.7, 130.4], '福岡県南部': [33.4, 130.7], '福岡県北九州': [33.9, 130.9],
+      '佐賀県北部': [33.5, 130.0], '佐賀県南部': [33.1, 130.3],
+      '長崎県北部': [33.4, 129.7], '長崎県南部': [32.7, 129.9], '長崎県壱岐・対馬': [34.3, 129.3], '長崎県五島': [32.7, 128.8],
+      '熊本県阿蘇': [32.9, 131.1], '熊本県球磨': [32.2, 130.8], '熊本県上益城': [32.7, 130.8], '熊本県天草・芦北': [32.3, 130.2], '熊本県熊本': [32.8, 130.7],
+      '大分県北部': [33.6, 131.4], '大分県南部': [32.9, 131.5], '大分県西部': [33.2, 131.0],
+      '宮崎県北部': [32.5, 131.7], '宮崎県南部': [31.7, 131.1], '宮崎県西部': [32.1, 131.1],
+      '鹿児島県薩摩': [31.6, 130.3], '鹿児島県大隅': [31.4, 130.9], '鹿児島県種子島・屋久島': [30.4, 130.6], '鹿児島県奄美群島': [28.4, 129.5], '鹿児島県トカラ列島': [29.8, 129.6],
+      '沖縄県本島地方': [26.3, 127.8], '沖縄県宮古島地方': [24.8, 125.3], '沖縄県八重山地方': [24.4, 124.2], '沖縄県大東島地方': [25.8, 131.2],
+    };
+
     const PREF_CENTERS = {
       '北海道': [43.064, 141.347], '青森県': [40.824, 140.741], '岩手県': [39.704, 141.153],
       '宮城県': [38.269, 140.872], '秋田県': [39.718, 140.102], '山形県': [38.241, 140.364],
@@ -1727,6 +1912,8 @@
       { n: '那覇', lat: 26.212, lng: 127.681 }, { n: '新潟', lat: 37.916, lng: 139.036 },
       { n: '金沢', lat: 36.561, lng: 136.656 }, { n: '盛岡', lat: 39.703, lng: 141.153 },
       { n: '青森', lat: 40.824, lng: 140.741 }, { n: '鹿児島', lat: 31.560, lng: 130.558 },
+      { n: 'Seoul', lat: 37.566, lng: 126.978 }, { n: 'Beijing', lat: 39.909, lng: 116.397 },
+      { n: 'Shanghai', lat: 31.228, lng: 121.474 }, { n: 'Taipei', lat: 25.033, lng: 121.565 },
     ];
 
     const S = {
@@ -1738,14 +1925,10 @@
     };
 
     const INT = {
-      10: { lbl: '1', cls: 'i1', color: '#9ec5fe' },
-      20: { lbl: '2', cls: 'i2', color: '#60a5fa' },
-      30: { lbl: '3', cls: 'i3', color: '#4ade80' },
-      40: { lbl: '4', cls: 'i4', color: '#facc15' },
-      45: { lbl: '5弱', cls: 'i5m', color: '#fb923c' },
-      50: { lbl: '5強', cls: 'i5p', color: '#f97316' },
-      55: { lbl: '6弱', cls: 'i6m', color: '#ef4444' },
-      60: { lbl: '6強', cls: 'i6p', color: '#dc2626' },
+      10: { lbl: '1', cls: 'i1', color: '#9ec5fe' }, 20: { lbl: '2', cls: 'i2', color: '#60a5fa' },
+      30: { lbl: '3', cls: 'i3', color: '#4ade80' }, 40: { lbl: '4', cls: 'i4', color: '#facc15' },
+      45: { lbl: '5弱', cls: 'i5m', color: '#fb923c' }, 50: { lbl: '5強', cls: 'i5p', color: '#f97316' },
+      55: { lbl: '6弱', cls: 'i6m', color: '#ef4444' }, 60: { lbl: '6強', cls: 'i6p', color: '#dc2626' },
       70: { lbl: '7', cls: 'i7', color: '#cc44ff' },
     };
     const intInfo = s => INT[s] || { lbl: '不明', cls: 'iunk', color: '#2e3d52' };
@@ -1754,14 +1937,21 @@
     const magSize = m => m < 2 ? 9 : m < 3 ? 12 : m < 4 ? 16 : m < 5 ? 22 : m < 6 ? 28 : m < 7 ? 36 : 46;
     const esc = s => { const d = document.createElement('div'); d.appendChild(document.createTextNode(String(s))); return d.innerHTML; };
 
+    function parseEqDate(s) {
+      if (!s || typeof s !== 'string') return new Date(NaN);
+      return new Date(s.replace(/\//g, '-').replace(' ', 'T'));
+    }
+
     function fmtTime(s) {
-      const d = new Date(s.replace(' ', 'T')), now = new Date(), diff = now - d;
+      const d = parseEqDate(s), now = new Date(), diff = now - d;
+      if (isNaN(d)) return '不明';
       if (diff < 60000) return `${Math.floor(diff / 1000)}秒前`;
       if (diff < 3600000) return `${Math.floor(diff / 60000)}分前`;
       return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     }
     function fmtDateTime(s) {
-      const d = new Date(s.replace(' ', 'T'));
+      const d = parseEqDate(s);
+      if (isNaN(d)) return '不明';
       return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
@@ -1778,10 +1968,7 @@
         ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke();
         ctx.strokeStyle = '#ff2d3e'; ctx.lineWidth = 1.5; ctx.shadowBlur = 10; ctx.shadowColor = '#ff2d3e';
         ctx.beginPath();
-        for (let x = 0; x < W; x++) {
-          const v = Math.sin((x + t) * 0.045) * 4 + Math.sin((x + t) * 0.13) * 2.5 + (Math.random() - .5) * 1.5;
-          x === 0 ? ctx.moveTo(x, MID - v) : ctx.lineTo(x, MID - v);
-        }
+        for (let x = 0; x < W; x++) { const v = Math.sin((x + t) * 0.045) * 4 + Math.sin((x + t) * 0.13) * 2.5 + (Math.random() - .5) * 1.5; x === 0 ? ctx.moveTo(x, MID - v) : ctx.lineTo(x, MID - v); }
         ctx.stroke(); ctx.shadowBlur = 0;
         const cx = (t * 2) % W, cv2 = Math.sin((cx + t) * 0.045) * 4 + Math.sin((cx + t) * 0.13) * 2.5;
         ctx.fillStyle = '#ff2d3e'; ctx.shadowBlur = 14; ctx.shadowColor = '#ff2d3e';
@@ -1794,14 +1981,11 @@
 
     let hdrAnimId;
     function startHdrAnim() {
-      const cv = document.getElementById('hdr-canvas');
-      if (!cv) return;
+      const cv = document.getElementById('hdr-canvas'); if (!cv) return;
       const ctx = cv.getContext('2d');
       const resize = () => { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; };
-      resize();
-      new ResizeObserver(resize).observe(cv);
-      const data = [];
-      let t = 0;
+      resize(); new ResizeObserver(resize).observe(cv);
+      const data = []; let t = 0;
       function draw() {
         const W = cv.width, H = cv.height, MID = H / 2;
         if (!W || !H) { hdrAnimId = requestAnimationFrame(draw); return; }
@@ -1814,27 +1998,21 @@
         S.hdrSpikes = S.hdrSpikes.filter(s => s.life > 0);
         S.hdrSpikes.forEach(s => { spike += s.amp * Math.exp(-s.dec * (s.total - s.life)) * Math.sin(s.life * s.freq); s.life--; });
         const base = Math.sin(t * 0.07) * 1.8 + Math.sin(t * 0.18) * 1 + (Math.random() - .5) * 1.5;
-        data.push(base + spike);
-        if (data.length > W) data.shift();
+        data.push(base + spike); if (data.length > W) data.shift();
         const grad = ctx.createLinearGradient(0, 0, 0, H);
         grad.addColorStop(0, 'rgba(0,216,255,0)'); grad.addColorStop(0.5, 'rgba(0,216,255,0.75)'); grad.addColorStop(1, 'rgba(0,216,255,0)');
         ctx.strokeStyle = grad; ctx.lineWidth = 1.5; ctx.shadowBlur = 5; ctx.shadowColor = '#00d8ff';
         ctx.beginPath();
         const scale = (H / 2 - 5);
-        for (let x = 0; x < data.length; x++) {
-          const y = MID - Math.max(-1, Math.min(1, data[x] / 7)) * scale;
-          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.stroke(); ctx.shadowBlur = 0;
-        t++;
+        for (let x = 0; x < data.length; x++) { const y = MID - Math.max(-1, Math.min(1, data[x] / 7)) * scale; x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+        ctx.stroke(); ctx.shadowBlur = 0; t++;
         hdrAnimId = requestAnimationFrame(draw);
       }
       draw();
     }
 
     function addHdrSpike(mag) {
-      const amp = Math.min((mag || 2) / 7 * 5, 5);
-      S.hdrSpikes.push({ amp, life: 70, total: 70, dec: 0.04, freq: 0.25 + Math.random() * 0.2 });
+      S.hdrSpikes.push({ amp: Math.min((mag || 2) / 7 * 5, 5), life: 70, total: 70, dec: 0.04, freq: 0.25 + Math.random() * 0.2 });
     }
 
     function makeXIcon(col, sz, isNew) {
@@ -1850,31 +2028,40 @@
     }
 
     async function initMap() {
-      S.map = L.map('map', { zoomControl: false }).setView([36.5, 138], 5);
+      S.map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([35, 137], 4);
       L.control.zoom({ position: 'bottomright' }).addTo(S.map);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(S.map);
       setTimeout(() => S.map.invalidateSize(), 100);
+
+      try {
+        const worldTopo = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json());
+        const worldFeatures = topojson.feature(worldTopo, worldTopo.objects.countries);
+        L.geoJSON(worldFeatures, {
+          style: { color: 'rgba(255,255,255,0.16)', weight: 0.6, fillColor: '#131820', fillOpacity: 0.95 },
+          interactive: false
+        }).addTo(S.map);
+      } catch (e) { }
 
       try {
         const r = await fetch('https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson');
         if (!r.ok) throw new Error();
         const gj = await r.json();
         S.prefLayer = L.geoJSON(gj, {
-          style: { color: 'rgba(255,255,255,0.22)', weight: 0.8, fillColor: '#0c1220', fillOpacity: 0.55 },
+          style: { color: 'rgba(255,255,255,0.28)', weight: 0.9, fillColor: '#0d1422', fillOpacity: 0.9 },
           interactive: false
         }).addTo(S.map);
-        S.prefLayer.bringToBack();
       } catch (e) { }
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 18, opacity: 0.4, pane: 'overlayPane' }).addTo(S.map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_only_labels/{z}/{x}/{y}{r}.png', {
+        maxZoom: 18, opacity: 0.35, pane: 'overlayPane'
+      }).addTo(S.map);
 
       MAJOR_CITIES.forEach(c => {
         const m = L.marker([c.lat, c.lng], {
           icon: L.divIcon({
             className: '',
             html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
-          <div style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.6)"></div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;color:rgba(255,255,255,0.4);white-space:nowrap;margin-top:2px;text-shadow:0 0 4px rgba(0,0,0,1)">${c.n}</span>
+          <div style="width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.55)"></div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);white-space:nowrap;margin-top:2px;text-shadow:0 0 4px rgba(0,0,0,1)">${c.n}</span>
         </div>`,
             iconSize: [50, 22], iconAnchor: [25, 2]
           }),
@@ -1919,22 +2106,15 @@
     }
 
     function playWaves(lat, lng, mag) {
-      stopWaves();
-      if (!S.map) return;
-      const base = Math.max(80000, (mag || 3) * 90000);
-      const maxR = base * 3.2;
-
+      stopWaves(); if (!S.map) return;
+      const base = Math.max(80000, (mag || 3) * 90000), maxR = base * 3.2;
       S.pWave = L.circle([lat, lng], { radius: 3000, color: '#ff3348', weight: 1.5, fill: false, opacity: 0.9, interactive: false }).addTo(S.map);
       S.sWave = L.circle([lat, lng], { radius: 3000, color: '#ff8a00', weight: 2, fillColor: '#ff8a00', fillOpacity: 0.03, opacity: 0.75, interactive: false }).addTo(S.map);
-
       let pR = 3000, sR = 3000;
       const pSpd = base * 0.026, sSpd = base * 0.016;
-
       function tick() {
-        pR = Math.min(pR + pSpd, maxR);
-        sR = Math.min(sR + sSpd, maxR);
-        const pOp = Math.max(0, 0.9 * (1 - pR / maxR));
-        const sOp = Math.max(0, 0.75 * (1 - sR / maxR));
+        pR = Math.min(pR + pSpd, maxR); sR = Math.min(sR + sSpd, maxR);
+        const pOp = Math.max(0, 0.9 * (1 - pR / maxR)), sOp = Math.max(0, 0.75 * (1 - sR / maxR));
         if (S.pWave) { S.pWave.setRadius(pR); S.pWave.setStyle({ opacity: pOp }); }
         if (S.sWave) { S.sWave.setRadius(sR); S.sWave.setStyle({ opacity: sOp, fillOpacity: sOp * 0.05 }); }
         if (pR < maxR) S.waveTimer = requestAnimationFrame(tick);
@@ -1964,22 +2144,48 @@
         S.prefLayer.eachLayer(layer => {
           const n = layer.feature.properties.nam_ja || '';
           const sc = prefMax[n] || 0;
-          if (sc > 0) { const ii = intInfo(sc); layer.setStyle({ fillColor: ii.color, fillOpacity: 0.42 }); }
-          else layer.setStyle({ fillColor: '#0c1220', fillOpacity: 0.55 });
+          if (sc > 0) { const ii = intInfo(sc); layer.setStyle({ fillColor: ii.color, fillOpacity: 0.38 }); }
+          else layer.setStyle({ fillColor: '#0d1422', fillOpacity: 0.9 });
         });
       }
 
+      const shownRegions = new Set();
+      pts.forEach(p => {
+        if (!p.scale || p.scale < 0) return;
+        const regionKey = (p.pref || '') + (p.addr || '');
+        const simpleKey = p.addr || '';
+        const coords = REGION_CENTERS[regionKey] || REGION_CENTERS[simpleKey] || PREF_CENTERS[p.pref];
+        if (!coords || shownRegions.has(regionKey)) return;
+        shownRegions.add(regionKey);
+        const ii = intInfo(p.scale);
+        const label = p.addr || p.pref || '';
+        const m = L.marker(coords, {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
+          <div style="background:${ii.color}dd;border:2px solid ${ii.color};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.9);box-shadow:0 0 12px ${ii.color}88">${ii.lbl}</div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;color:${ii.color};white-space:nowrap;margin-top:2px;text-shadow:0 0 4px rgba(0,0,0,1)">${esc(label)}</span>
+        </div>`,
+            iconSize: [60, 34], iconAnchor: [30, 4]
+          }),
+          interactive: false, zIndexOffset: 500
+        }).addTo(S.map);
+        S.intensityMarkers.push(m);
+      });
+
       Object.entries(prefMax).forEach(([pref, sc]) => {
+        const hasRegion = pts.some(p => p.pref === pref && (REGION_CENTERS[(p.pref || '') + (p.addr || '')] || REGION_CENTERS[p.addr || '']));
+        if (hasRegion) return;
         const coords = PREF_CENTERS[pref];
-        if (!coords || sc < 0) return;
+        if (!coords) return;
         const ii = intInfo(sc);
         const m = L.marker(coords, {
           icon: L.divIcon({
             className: '',
-            html: `<div style="background:${ii.color}dd;border:2px solid ${ii.color};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.9);box-shadow:0 0 10px ${ii.color}88;pointer-events:none">${ii.lbl}</div>`,
+            html: `<div style="background:${ii.color}dd;border:2px solid ${ii.color};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.9);box-shadow:0 0 12px ${ii.color}88;pointer-events:none">${ii.lbl}</div>`,
             iconSize: [22, 22], iconAnchor: [11, 11]
           }),
-          interactive: false, zIndexOffset: 500
+          interactive: false, zIndexOffset: 400
         }).addTo(S.map);
         S.intensityMarkers.push(m);
       });
@@ -1988,9 +2194,7 @@
     function clearIntensityLayer() {
       S.intensityMarkers.forEach(m => { if (S.map) S.map.removeLayer(m); });
       S.intensityMarkers = [];
-      if (S.prefLayer) {
-        S.prefLayer.eachLayer(layer => layer.setStyle({ fillColor: '#0c1220', fillOpacity: 0.55 }));
-      }
+      if (S.prefLayer) S.prefLayer.eachLayer(layer => layer.setStyle({ fillColor: '#0d1422', fillOpacity: 0.9 }));
     }
 
     function renderDetail(eq) {
@@ -1999,16 +2203,11 @@
       const title = document.getElementById('left-panel-title');
       const back = document.getElementById('detail-back');
       if (!eq) {
-        grid.classList.remove('hidden');
-        panel.classList.add('hidden');
-        title.textContent = '本日の統計';
-        back.classList.add('hidden');
-        return;
+        grid.classList.remove('hidden'); panel.classList.add('hidden');
+        title.textContent = '本日の統計'; back.classList.add('hidden'); return;
       }
-      grid.classList.add('hidden');
-      panel.classList.remove('hidden');
-      title.textContent = '選択中の地震';
-      back.classList.remove('hidden');
+      grid.classList.add('hidden'); panel.classList.remove('hidden');
+      title.textContent = '選択中の地震'; back.classList.remove('hidden');
       const h = eq.earthquake.hypocenter, m = h.magnitude || 0, sc = eq.earthquake.maxScale;
       const ii = intInfo(sc), tsun = eq.earthquake.domesticTsunami;
       panel.innerHTML = `
@@ -2029,7 +2228,7 @@
       S.quakes.unshift(eq);
       if (S.quakes.length > MAX_QUAKES) S.quakes.pop();
       S.stats.total++;
-      const eqDate = new Date(eq.earthquake.time.replace(' ', 'T')).toDateString();
+      const eqDate = parseEqDate(eq.earthquake.time).toDateString();
       if (eqDate === TODAY) {
         S.stats.count++;
         const m = eq.earthquake.hypocenter.magnitude || 0;
@@ -2089,7 +2288,7 @@
 
     function renderMiniList() {
       const el = document.getElementById('mini-list');
-      const today = S.quakes.filter(q => new Date(q.earthquake.time.replace(' ', 'T')).toDateString() === TODAY).slice(0, 15);
+      const today = S.quakes.filter(q => parseEqDate(q.earthquake.time).toDateString() === TODAY).slice(0, 15);
       if (!today.length) {
         el.innerHTML = `<div class="no-data"><div class="no-data-icon">📡</div><div class="no-data-txt">データ待機中...</div></div>`;
         return;
@@ -2158,10 +2357,8 @@
       ws.onmessage = ev => {
         try {
           const d = JSON.parse(ev.data);
-          if (d.code === 551) {
-            const q = processQ(d, true);
-            if (q) { renderList(); renderMiniList(); updateStats(); }
-          } else if (d.code === 554) {
+          if (d.code === 551) { const q = processQ(d, true); if (q) { renderList(); renderMiniList(); updateStats(); } }
+          else if (d.code === 554) {
             const ov = document.createElement('div'); ov.className = 'eew-flash';
             document.body.appendChild(ov); setTimeout(() => ov.remove(), 3200);
             addHdrSpike(7);
@@ -2178,8 +2375,7 @@
 
     async function fetchHistory() {
       try {
-        const r = await fetch(HIST_URL);
-        if (!r.ok) return;
+        const r = await fetch(HIST_URL); if (!r.ok) return;
         const data = await r.json();
         if (Array.isArray(data)) [...data].reverse().forEach(d => processQ(d, false));
       } catch (e) { console.warn('History fetch failed', e); }
@@ -2187,16 +2383,11 @@
 
     function initFilters() {
       const sl = document.getElementById('fmag'), mv = document.getElementById('fmv');
-      sl.addEventListener('input', () => {
-        S.filterMag = parseFloat(sl.value);
-        mv.textContent = 'M' + S.filterMag.toFixed(1) + '+';
-        renderList();
-      });
+      sl.addEventListener('input', () => { S.filterMag = parseFloat(sl.value); mv.textContent = 'M' + S.filterMag.toFixed(1) + '+'; renderList(); });
       document.getElementById('fint').addEventListener('click', e => {
         const c = e.target.closest('.chip'); if (!c) return;
         document.querySelectorAll('#fint .chip').forEach(x => x.classList.remove('on'));
-        c.classList.add('on');
-        S.filterInt = parseInt(c.dataset.int);
+        c.classList.add('on'); S.filterInt = parseInt(c.dataset.int);
         document.getElementById('fiv').textContent = c.dataset.int === '-1' ? '全て' : c.textContent;
         renderList();
       });
@@ -2211,12 +2402,9 @@
     function renderChangelog(logs, unreadMode = false) {
       clList.innerHTML = '';
       logs.forEach(log => {
-        const item = document.createElement('div');
-        item.className = 'cl-item';
-        item.innerHTML = `
-      <div class="cl-item-hdr"><span class="cl-ver">${esc(log.version)}</span><span class="cl-date">${esc(log.date)}</span></div>
-      <div class="cl-title">${esc(log.title)}</div>
-      <div class="cl-desc">${esc(log.desc)}</div>`;
+        const item = document.createElement('div'); item.className = 'cl-item';
+        item.innerHTML = `<div class="cl-item-hdr"><span class="cl-ver">${esc(log.version)}</span><span class="cl-date">${esc(log.date)}</span></div>
+      <div class="cl-title">${esc(log.title)}</div><div class="cl-desc">${esc(log.desc)}</div>`;
         clList.appendChild(item);
       });
       if (unreadMode) { clConfirm.classList.remove('hidden'); clClose.classList.add('hidden'); }
@@ -2229,8 +2417,7 @@
       let badge = clBtn.querySelector('.unread-badge');
       if (unread.length > 0) {
         if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge'; clBtn.appendChild(badge); }
-        renderChangelog(unread, true);
-        clOverlay.classList.remove('hidden');
+        renderChangelog(unread, true); clOverlay.classList.remove('hidden');
       } else if (badge) badge.remove();
     }
 
@@ -2247,23 +2434,27 @@
     const tutOverlay = document.getElementById('tutorial-overlay');
     document.getElementById('tutorial-start').addEventListener('click', () => {
       localStorage.setItem('seismo_tutorial_shown', '1');
-      tutOverlay.classList.add('hidden');
-      checkUnreadCL();
+      tutOverlay.classList.add('hidden'); checkUnreadCL();
     });
     document.getElementById('help-btn').addEventListener('click', () => tutOverlay.classList.remove('hidden'));
     tutOverlay.addEventListener('click', e => { if (e.target === tutOverlay) tutOverlay.classList.add('hidden'); });
 
     document.getElementById('detail-back').addEventListener('click', () => {
-      S.selectedId = null;
-      renderDetail(null);
-      clearIntensityLayer();
-      stopWaves();
-      refreshMarkers();
-      renderList();
-      if (S.map) S.map.flyTo([36.5, 138], 5, { duration: 0.8 });
+      S.selectedId = null; renderDetail(null); clearIntensityLayer(); stopWaves(); refreshMarkers(); renderList();
+      if (S.map) S.map.flyTo([35, 137], 4, { duration: 0.8 });
     });
 
     document.getElementById('eq-alert').addEventListener('click', () => document.getElementById('eq-alert').classList.remove('show'));
+
+    function openAdGuide() { document.getElementById('ad-guide-modal').style.display = 'flex'; }
+    function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const iframe = document.querySelector('.ad-content-area iframe');
+        if (!iframe || iframe.offsetHeight === 0) console.log('AdBlocker detected');
+      }, 3000);
+    });
 
     function setLdStatus(txt) {
       document.getElementById('ld-status').innerHTML = txt + '<span class="blink">.</span><span class="blink2">.</span><span class="blink3">.</span>';
@@ -2272,36 +2463,21 @@
     async function init() {
       startLoadingAnim();
       const bar = document.getElementById('ld-bar');
-
       setLdStatus('地震データを取得中');
-      await Promise.all([
-        new Promise(r => setTimeout(r, 1200)),
-        fetchHistory().catch(() => { })
-      ]);
+      await Promise.all([new Promise(r => setTimeout(r, 1200)), fetchHistory().catch(() => { })]);
       setLdStatus('マップを準備中');
-      bar.style.transition = 'width 600ms ease-out';
-      bar.style.width = '100%';
-
+      bar.style.transition = 'width 600ms ease-out'; bar.style.width = '100%';
       document.getElementById('loading').classList.add('fade-out');
       setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
       document.getElementById('app').classList.remove('hidden');
-
       requestAnimationFrame(async () => {
         await initMap();
         initFilters();
         S.quakes.forEach(q => putMarker(q, false));
-        renderList();
-        renderMiniList();
-        updateStats();
-        startHdrAnim();
-        connectWS();
+        renderList(); renderMiniList(); updateStats(); startHdrAnim(); connectWS();
         cancelAnimationFrame(ldAnimId);
-
-        if (!localStorage.getItem('seismo_tutorial_shown')) {
-          tutOverlay.classList.remove('hidden');
-        } else {
-          checkUnreadCL();
-        }
+        if (!localStorage.getItem('seismo_tutorial_shown')) { tutOverlay.classList.remove('hidden'); }
+        else checkUnreadCL();
       });
     }
 
