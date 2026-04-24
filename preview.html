@@ -919,6 +919,18 @@
       margin-top: 0.1rem
     }
 
+    #sidebar {
+      width: auto;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      background: #0d1117;
+      border-right: 1px solid #30363d;
+      box-sizing: border-box;
+      padding-bottom: 20px;
+    }
+
     .ad-wrap {
       flex-shrink: 0;
       border-top: 1px solid var(--border);
@@ -927,15 +939,14 @@
 
     .ad-outer-container {
       position: relative;
-      width: 300px;
+      width: auto;
       height: 250px;
-      margin: 30px auto;
+      margin: 20px auto;
       background: var(--ad-bg);
       border: 1px solid var(--ad-border);
       border-radius: 8px;
       display: block;
-      overflow: visible;
-      z-index: 10;
+      overflow: hidden;
     }
 
     .ad-placeholder {
@@ -973,13 +984,15 @@
     }
 
     .ad-content-area {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 5;
-      width: 100%;
-      height: 100%;
+      width: 300px;
+      height: 250px;
       display: block;
+    }
+
+
+    .ad-content-area {
+      width: 300px;
+      height: 250px;
     }
 
     .ad-content-area iframe {
@@ -1690,7 +1703,7 @@
     </header>
 
     <div class="body">
-      <div class="left">
+      <div id="sidebar" class="left">
         <div class="sec">
           <div class="sec-title-row">
             <div class="sec-title" id="left-panel-title">本日の統計</div>
@@ -1740,23 +1753,27 @@
             </div>
           </div>
         </div>
-        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem">
+        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
           <div class="sec-title">本日の地震 — アクティビティ</div>
         </div>
-        <div class="mini-list" id="mini-list">
-          <div class="no-data">
-            <div class="no-data-icon">📡</div>
-            <div class="no-data-txt">データ待機中...</div>
-          </div>
-        </div>
-        <div class="ad-wrap">
-          <div class="ad-outer-container">
-            <div class="ad-placeholder">
-              <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
-              <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+
+        <div class="scroll-area">
+          <div class="mini-list" id="mini-list">
+            <div class="no-data">
+              <div class="no-data-icon">📡</div>
+              <div class="no-data-txt">データ待機中...</div>
             </div>
-            <div class="ad-content-area">
-              <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+          </div>
+
+          <div class="ad-wrap">
+            <div class="ad-outer-container">
+              <div class="ad-placeholder">
+                <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
+                <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+              </div>
+              <div class="ad-content-area">
+                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+              </div>
             </div>
           </div>
         </div>
