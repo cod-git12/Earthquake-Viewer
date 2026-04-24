@@ -971,7 +971,6 @@
       margin-bottom: 0.4rem;
       font-family: var(--mono);
       line-height: 1.5;
-      z-index: 1;
     }
 
     .btn-guide-open {
@@ -987,7 +986,7 @@
     .ad-content-area {
       width: 300px;
       height: 250px;
-      z-index: 2;
+      z-index: 5;
     }
 
     .ad-content-area iframe {
@@ -2485,10 +2484,19 @@
     function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
 
     window.addEventListener('load', () => {
-      setTimeout(() => {
-        const iframe = document.querySelector('.ad-content-area iframe');
-        if (!iframe || iframe.offsetHeight === 0) console.log('AdBlocker detected');
-      }, 3000);
+      const checkAd = setInterval(() => {
+        const adArea = document.querySelector('.ad-content-area');
+        const iframe = adArea.querySelector('iframe');
+        const placeholder = document.querySelector('.ad-placeholder');
+
+        if (iframe && iframe.offsetHeight > 10) {
+          placeholder.style.display = 'none';
+          console.log("Ad detected. Message hidden.");
+          clearInterval(checkAd);
+        }
+      }, 1000);
+
+      setTimeout(() => clearInterval(checkAd), 10000);
     });
 
     function setLdStatus(txt) {
