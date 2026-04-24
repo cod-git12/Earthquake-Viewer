@@ -28,7 +28,6 @@
       --cyan-glow: rgba(0, 216, 255, 0.25);
       --green: #00ff88;
       --purple: #cc44ff;
-      --yellow: #ffff34;
       --text-1: #e8eef8;
       --text-2: #6e7f96;
       --text-3: #2e3d52;
@@ -919,18 +918,6 @@
       margin-top: 0.1rem
     }
 
-    #sidebar {
-      width: auto;
-      height: 100vh;
-      overflow-y: auto;
-      overflow-x: hidden;
-      scroll-behavior: smooth;
-      background: #0d1117;
-      border-right: 1px solid #30363d;
-      box-sizing: border-box;
-      padding-bottom: 20px;
-    }
-
     .ad-wrap {
       flex-shrink: 0;
       border-top: 1px solid var(--border);
@@ -939,14 +926,12 @@
 
     .ad-outer-container {
       position: relative;
-      width: auto;
-      height: 250px;
-      margin: 20px auto;
-      background: var(--ad-bg);
-      border: 1px solid var(--ad-border);
+      width: 100%;
+      height: 130px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      display: block;
-      overflow: hidden;
+      overflow: hidden
     }
 
     .ad-placeholder {
@@ -970,7 +955,7 @@
       color: var(--text-3);
       margin-bottom: 0.4rem;
       font-family: var(--mono);
-      line-height: 1.5;
+      line-height: 1.5
     }
 
     .btn-guide-open {
@@ -984,14 +969,14 @@
     }
 
     .ad-content-area {
-      width: 300px;
-      height: 250px;
+      position: relative;
       z-index: 5;
-    }
-
-    .ad-content-area iframe {
-      max-width: 100% !important;
-      max-height: 100% !important;
+      width: 100%;
+      height: 130px;
+      overflow: hidden;
+      transform: scale(0.433);
+      transform-origin: top left;
+      width: 230px
     }
 
     #ad-guide-modal {
@@ -1033,20 +1018,6 @@
       width: 100%;
       padding: 0.65rem;
       background: var(--cyan);
-      border: none;
-      color: var(--bg);
-      border-radius: 8px;
-      margin-top: 1rem;
-      cursor: pointer;
-      font-family: var(--cond);
-      font-weight: 700;
-      font-size: 0.9rem
-    }
-
-    .ad-modal-reload {
-      width: 100%;
-      padding: 0.65rem;
-      background: var(--yellow);
       border: none;
       color: var(--bg);
       border-radius: 8px;
@@ -1697,7 +1668,7 @@
     </header>
 
     <div class="body">
-      <div id="sidebar" class="left">
+      <div class="left">
         <div class="sec">
           <div class="sec-title-row">
             <div class="sec-title" id="left-panel-title">本日の統計</div>
@@ -1747,27 +1718,23 @@
             </div>
           </div>
         </div>
-        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
+        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem">
           <div class="sec-title">本日の地震 — アクティビティ</div>
         </div>
-
-        <div class="scroll-area">
-          <div class="mini-list" id="mini-list">
-            <div class="no-data">
-              <div class="no-data-icon">📡</div>
-              <div class="no-data-txt">データ待機中...</div>
-            </div>
+        <div class="mini-list" id="mini-list">
+          <div class="no-data">
+            <div class="no-data-icon">📡</div>
+            <div class="no-data-txt">データ待機中...</div>
           </div>
-
-          <div class="ad-wrap">
-            <div class="ad-outer-container">
-              <div class="ad-placeholder">
-                <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
-                <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
-              </div>
-              <div class="ad-content-area">
-                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
-              </div>
+        </div>
+        <div class="ad-wrap">
+          <div class="ad-outer-container">
+            <div class="ad-placeholder">
+              <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
+              <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+            </div>
+            <div class="ad-content-area">
+              <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
             </div>
           </div>
         </div>
@@ -1808,7 +1775,6 @@
     <div class="ad-modal-body">
       <h3>広告ブロックの解除方法</h3>
       <p>お使いのブロッカーのアイコンをクリックし、「このサイトでオフにする」を選択してください。解除後、ページを再読み込みすると広告が表示されます。</p>
-      <button class="ad-modal-reload" onclick="location.reload();">再読み込み</button>
       <button class="ad-modal-close" onclick="closeAdGuide()">閉じる</button>
     </div>
   </div>
@@ -1823,6 +1789,15 @@
     const TODAY = new Date().toDateString();
 
     const UPDATE_LOGS = [
+      {
+        id: 'v1.1.2', version: 'v1.1.2', date: '2026-04-24',
+        title: 'マップ・表示修正アップデート',
+        desc: '以下の修正・改善を行いました。\n\n'
+          + '・震度分布表示時に地名が重なって表示されるバグを修正\n'
+          + '・地域区分を市町村から細分区域に修正\n'
+          + '・世界地図が正しく表示されないバグを修正\n'
+          + '・マップ内に現在時刻を追加'
+      },
       {
         id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
         title: 'マップ・表示品質アップデート',
@@ -2484,19 +2459,10 @@
     function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
 
     window.addEventListener('load', () => {
-      const checkAd = setInterval(() => {
-        const adArea = document.querySelector('.ad-content-area');
-        const iframe = adArea.querySelector('iframe');
-        const placeholder = document.querySelector('.ad-placeholder');
-
-        if (iframe && iframe.offsetHeight > 10) {
-          placeholder.style.display = 'none';
-          console.log("Ad detected. Message hidden.");
-          clearInterval(checkAd);
-        }
-      }, 1000);
-
-      setTimeout(() => clearInterval(checkAd), 10000);
+      setTimeout(() => {
+        const iframe = document.querySelector('.ad-content-area iframe');
+        if (!iframe || iframe.offsetHeight === 0) console.log('AdBlocker detected');
+      }, 3000);
     });
 
     function setLdStatus(txt) {
