@@ -919,6 +919,18 @@
       margin-top: 0.1rem
     }
 
+    #sidebar {
+      width: auto;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      background: #0d1117;
+      border-right: 1px solid #30363d;
+      box-sizing: border-box;
+      padding-bottom: 20px;
+    }
+
     .ad-wrap {
       flex-shrink: 0;
       border-top: 1px solid var(--border);
@@ -927,12 +939,14 @@
 
     .ad-outer-container {
       position: relative;
-      width: 100%;
-      height: 130px;
-      background: var(--bg-2);
-      border: 1px solid var(--border);
+      width: auto;
+      height: 250px;
+      margin: 20px auto;
+      background: var(--ad-bg);
+      border: 1px solid var(--ad-border);
       border-radius: 8px;
-      overflow: hidden
+      display: block;
+      overflow: hidden;
     }
 
     .ad-placeholder {
@@ -956,7 +970,7 @@
       color: var(--text-3);
       margin-bottom: 0.4rem;
       font-family: var(--mono);
-      line-height: 1.5
+      line-height: 1.5;
     }
 
     .btn-guide-open {
@@ -970,14 +984,14 @@
     }
 
     .ad-content-area {
-      position: relative;
+      width: 300px;
+      height: 250px;
       z-index: 5;
-      width: 100%;
-      height: 130px;
-      overflow: hidden;
-      transform: scale(0.433);
-      transform-origin: top left;
-      width: 230px
+    }
+
+    .ad-content-area iframe {
+      max-width: 100% !important;
+      max-height: 100% !important;
     }
 
     #ad-guide-modal {
@@ -1683,7 +1697,7 @@
     </header>
 
     <div class="body">
-      <div class="left">
+      <div id="sidebar" class="left">
         <div class="sec">
           <div class="sec-title-row">
             <div class="sec-title" id="left-panel-title">本日の統計</div>
@@ -1733,23 +1747,27 @@
             </div>
           </div>
         </div>
-        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem">
+        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
           <div class="sec-title">本日の地震 — アクティビティ</div>
         </div>
-        <div class="mini-list" id="mini-list">
-          <div class="no-data">
-            <div class="no-data-icon">📡</div>
-            <div class="no-data-txt">データ待機中...</div>
-          </div>
-        </div>
-        <div class="ad-wrap">
-          <div class="ad-outer-container">
-            <div class="ad-placeholder">
-              <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
-              <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+
+        <div class="scroll-area">
+          <div class="mini-list" id="mini-list">
+            <div class="no-data">
+              <div class="no-data-icon">📡</div>
+              <div class="no-data-txt">データ待機中...</div>
             </div>
-            <div class="ad-content-area">
-              <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+          </div>
+
+          <div class="ad-wrap">
+            <div class="ad-outer-container">
+              <div class="ad-placeholder">
+                <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
+                <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+              </div>
+              <div class="ad-content-area">
+                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+              </div>
             </div>
           </div>
         </div>
@@ -2466,10 +2484,19 @@
     function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
 
     window.addEventListener('load', () => {
-      setTimeout(() => {
-        const iframe = document.querySelector('.ad-content-area iframe');
-        if (!iframe || iframe.offsetHeight === 0) console.log('AdBlocker detected');
-      }, 3000);
+      const checkAd = setInterval(() => {
+        const adArea = document.querySelector('.ad-content-area');
+        const iframe = adArea.querySelector('iframe');
+        const placeholder = document.querySelector('.ad-placeholder');
+
+        if (iframe && iframe.offsetHeight > 10) {
+          placeholder.style.display = 'none';
+          console.log("Ad detected. Message hidden.");
+          clearInterval(checkAd);
+        }
+      }, 1000);
+
+      setTimeout(() => clearInterval(checkAd), 10000);
     });
 
     function setLdStatus(txt) {
