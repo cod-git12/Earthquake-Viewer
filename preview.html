@@ -1821,8 +1821,19 @@
     const MAX_QUAKES = 100;
     const ALERT_MAG = 4.0;
     const TODAY = new Date().toDateString();
+    let areaGeoJson = null;
+    let currentAreaLayer = null;
 
     const UPDATE_LOGS = [
+      {
+        id: 'v1.1.2-pre', version: 'v1.1.2-pre', date: '2026-04-27',
+        title: '震度分布マップの視認性向上アップデート',
+        desc: '以下の修正・改善を行いました。\n\n'
+          + '・震度分布の表示方式をポイント（点）から細分区域（面）での塗りつぶしに変更\n'
+          + '・震度観測地点が密集している地域でのマーカーの重なりを解消\n'
+          + '・気象庁の細分区域（宮城県北部、中通りなど）に基づいた鮮やかな色分けを実装\n'
+          + '・震源地（×マーク）を最前面に表示し、どこが震源かより明確に判別可能に'
+      },
       {
         id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
         title: 'マップ・表示品質アップデート',
@@ -2103,6 +2114,15 @@
         }).addTo(S.map);
         S.cityMarkerList.push(m);
       });
+
+      try {
+        const res = await fetch('https://raw.githubusercontent.com/code4fukui/jma_seismic_area/main/jma_seismic_area.topojson');
+        const topo = await res.json();
+        areaGeoJson = topojson.feature(topo, topo.objects.jma_seismic_area);
+        console.log("区域データの読み込みが完了しました");
+      } catch (e) {
+        console.error("区域データの取得に失敗しました:", e);
+      }
     }
 
     function refreshMarkers() {
@@ -2116,13 +2136,47 @@
 
     function putMarker(eq, isNew = false) {
       if (!S.map) return;
+
+      if (currentAreaLayer) {
+        S.map.removeLayer(currentAreaLayer);
+        currentAreaLayer = null;
+      }
+
+      if (areaGeoJson && eq.points) {
+        const areaScales = {};
+        eq.points.forEach(p => {
+          areaScales[p.addr] = p.scale;
+        });
+
+        currentAreaLayer = L.geoJSON(areaGeoJson, {
+          style: (feature) => {
+            const scale = areaScales[feature.properties.name];
+            if (scale) {
+              return {
+                fillColor: intInfo(scale).color,
+                fillOpacity: 0.7,
+                color: '#111',
+                weight: 1
+              };
+            }
+            return { fillOpacity: 0, color: 'transparent', weight: 0 };
+          },
+          interactive: false
+        }).addTo(S.map);
+      }
+
       const h = eq.earthquake.hypocenter;
       if (!h.latitude || !h.longitude || h.latitude === -200) return;
-      if (S.markers.has(eq._id)) S.map.removeLayer(S.markers.get(eq._id));
+
+      if (S.markers.has(eq._id)) {
+        S.map.removeLayer(S.markers.get(eq._id));
+      }
+
       const mag = h.magnitude || 0, sc = eq.earthquake.maxScale;
       const col = sc > 0 ? intInfo(sc).color : magColor(mag);
       const icon = makeXIcon(col, magSize(mag), isNew);
       const d = intInfo(sc);
+
       const pop = `<div class="popup-content">
     <div class="popup-mag ${magCls(mag)}">${mag > 0 ? 'M' + mag.toFixed(1) : 'M?'}</div>
     <div class="popup-place">${esc(h.name || '震源地不明')}</div>
@@ -2132,9 +2186,14 @@
       <span class="popup-tag">${fmtDateTime(eq.earthquake.time)}</span>
     </div>
   </div>`;
-      const marker = L.marker([h.latitude, h.longitude], { icon, zIndexOffset: 1000 })
+
+      const marker = L.marker([h.latitude, h.longitude], {
+        icon,
+        zIndexOffset: 1000
+      })
         .bindPopup(pop, { maxWidth: 240 })
         .on('click', () => selectQ(eq._id));
+
       S.markers.set(eq._id, marker);
       refreshMarkers();
     }
