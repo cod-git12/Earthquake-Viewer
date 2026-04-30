@@ -2,2308 +2,2255 @@
 <html lang="ja">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SEISMO — リアルタイム地震モニター</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
-  <style>
-    :root {
-      --bg: #030507;
-      --bg-1: #070a10;
-      --bg-2: #0b0f18;
-      --bg-3: #10151f;
-      --bg-4: #161c28;
-      --red: #ff2d3e;
-      --red-dim: rgba(255, 45, 62, 0.12);
-      --red-glow: rgba(255, 45, 62, 0.3);
-      --orange: #ff8a00;
-      --cyan: #00d8ff;
-      --cyan-dim: rgba(0, 216, 255, 0.08);
-      --cyan-glow: rgba(0, 216, 255, 0.25);
-      --green: #00ff88;
-      --purple: #cc44ff;
-      --yellow: #ffff34;
-      --text-1: #e8eef8;
-      --text-2: #6e7f96;
-      --text-3: #2e3d52;
-      --border: rgba(0, 216, 255, 0.07);
-      --border-2: rgba(0, 216, 255, 0.14);
-      --mono: 'Share Tech Mono', monospace;
-      --sans: 'Barlow', sans-serif;
-      --cond: 'Barlow Condensed', sans-serif;
-    }
-
-    *,
-    *::before,
-    *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box
-    }
-
-    html,
-    body {
-      height: 100%;
-      overflow: hidden
-    }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text-1);
-      height: 100dvh;
-      -webkit-font-smoothing: antialiased
-    }
-
-    .hidden {
-      display: none !important
-    }
-
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 9999;
-      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, 0.012) 3px, rgba(0, 0, 0, 0.012) 4px)
-    }
-
-    #loading {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      transition: opacity 0.7s ease
-    }
-
-    #loading.fade-out {
-      opacity: 0;
-      pointer-events: none
-    }
-
-    .ld-logo {
-      font-family: var(--cond);
-      font-size: 5.5rem;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      color: var(--text-1);
-      line-height: 1;
-      margin-bottom: 0.15rem;
-      user-select: none
-    }
-
-    .ld-logo span {
-      color: var(--red)
-    }
-
-    .ld-sub {
-      font-family: var(--mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.35em;
-      color: var(--text-3);
-      text-transform: uppercase;
-      margin-bottom: 2.5rem
-    }
-
-    #ld-canvas {
-      display: block;
-      width: 420px;
-      height: 72px;
-      margin-bottom: 1.5rem
-    }
-
-    .ld-status {
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      color: var(--text-2);
-      letter-spacing: 0.08em;
-      min-height: 1.2em
-    }
-
-    .ld-bar-wrap {
-      width: 420px;
-      height: 2px;
-      background: var(--bg-3);
-      border-radius: 2px;
-      margin-top: 1rem;
-      overflow: hidden
-    }
-
-    .ld-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--red), var(--orange));
-      width: 0;
-      border-radius: 2px
-    }
-
-    @keyframes blink {
-
-      0%,
-      80%,
-      100% {
-        opacity: .25
-      }
-
-      40% {
-        opacity: 1
-      }
-    }
-
-    .blink {
-      animation: blink 0.9s infinite
-    }
-
-    .blink2 {
-      animation: blink 0.9s 0.2s infinite
-    }
-
-    .blink3 {
-      animation: blink 0.9s 0.4s infinite
-    }
-
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 800;
-      padding: 1rem;
-      animation: fadeIn 0.2s ease both
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0
-      }
-
-      to {
-        opacity: 1
-      }
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(36px) scale(0.96)
-      }
-
-      to {
-        opacity: 1;
-        transform: none
-      }
-    }
-
-    .close-btn {
-      background: var(--bg-3);
-      border: 1px solid var(--border-2);
-      border-radius: 8px;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-2);
-      cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-      flex-shrink: 0
-    }
-
-    .close-btn:hover {
-      color: var(--text-1);
-      background: var(--bg-4)
-    }
-
-    .close-btn svg {
-      pointer-events: none
-    }
-
-    .tutorial-card {
-      background: var(--bg-2);
-      border: 1px solid var(--border-2);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 560px;
-      max-height: 92dvh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both
-    }
-
-    .tutorial-head {
-      padding: 1.75rem 1.75rem 1.25rem;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .tutorial-eyebrow {
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.25em;
-      color: var(--red);
-      text-transform: uppercase;
-      margin-bottom: 0.4rem
-    }
-
-    .tutorial-h1 {
-      font-family: var(--cond);
-      font-size: 2.4rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      line-height: 1
-    }
-
-    .tutorial-h1 span {
-      color: var(--red)
-    }
-
-    .tutorial-desc {
-      font-size: 0.85rem;
-      color: var(--text-2);
-      margin-top: 0.45rem;
-      line-height: 1.5
-    }
-
-    .tutorial-body {
-      padding: 1.25rem 1.75rem;
-      overflow-y: auto;
-      flex: 1
-    }
-
-    .tutorial-body::-webkit-scrollbar {
-      width: 3px
-    }
-
-    .tutorial-body::-webkit-scrollbar-thumb {
-      background: var(--bg-4)
-    }
-
-    .feat-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.6rem;
-      margin-bottom: 1rem
-    }
-
-    .feat-card {
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.875rem
-    }
-
-    .feat-icon {
-      font-size: 1.4rem;
-      margin-bottom: 0.4rem
-    }
-
-    .feat-name {
-      font-family: var(--cond);
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--cyan);
-      margin-bottom: 0.2rem
-    }
-
-    .feat-text {
-      font-size: 0.75rem;
-      color: var(--text-2);
-      line-height: 1.55
-    }
-
-    .int-legend {
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem
-    }
-
-    .int-legend-title {
-      font-family: var(--mono);
-      font-size: 0.58rem;
-      letter-spacing: 0.2em;
-      color: var(--text-3);
-      text-transform: uppercase;
-      margin-bottom: 0.7rem
-    }
-
-    .int-rows {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.3rem 1rem
-    }
-
-    .int-row {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem
-    }
-
-    .int-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0
-    }
-
-    .int-lbl {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--text-2)
-    }
-
-    .tutorial-foot {
-      padding: 1rem 1.75rem 1.5rem;
-      border-top: 1px solid var(--border)
-    }
-
-    .start-btn {
-      width: 100%;
-      background: linear-gradient(135deg, #ff2d3e, #ff6a00);
-      border: none;
-      border-radius: 12px;
-      padding: 0.9rem;
-      font-family: var(--cond);
-      font-size: 1.05rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #fff;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.15s;
-      box-shadow: 0 4px 28px var(--red-glow)
-    }
-
-    .start-btn:hover {
-      opacity: 0.85;
-      transform: translateY(-1px)
-    }
-
-    .start-btn:active {
-      transform: none
-    }
-
-    .changelog-card {
-      background: var(--bg-2);
-      border: 1px solid var(--border-2);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 480px;
-      max-height: 82dvh;
-      display: flex;
-      flex-direction: column;
-      animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-      overflow: hidden
-    }
-
-    .changelog-hdr {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0
-    }
-
-    .changelog-hdr-title {
-      font-family: var(--cond);
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: 0.02em
-    }
-
-    .changelog-scroll {
-      overflow-y: auto;
-      padding: 1.25rem 1.5rem;
-      flex: 1
-    }
-
-    .changelog-scroll::-webkit-scrollbar {
-      width: 3px
-    }
-
-    .changelog-scroll::-webkit-scrollbar-thumb {
-      background: var(--bg-4)
-    }
-
-    .cl-item {
-      padding: 1.25rem 0;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .cl-item:first-child {
-      padding-top: 0
-    }
-
-    .cl-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0
-    }
-
-    .cl-item-hdr {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.45rem
-    }
-
-    .cl-ver {
-      background: var(--red-dim);
-      color: var(--red);
-      border: 1px solid rgba(255, 45, 62, 0.2);
-      border-radius: 5px;
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      padding: 0.12rem 0.45rem
-    }
-
-    .cl-date {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--text-3)
-    }
-
-    .cl-title {
-      font-family: var(--cond);
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 0.4rem
-    }
-
-    .cl-desc {
-      font-size: 0.82rem;
-      color: var(--text-2);
-      line-height: 1.7;
-      white-space: pre-wrap
-    }
-
-    .cl-confirm-btn {
-      width: 100%;
-      background: linear-gradient(135deg, #ff2d3e, #ff6a00);
-      border: none;
-      border-radius: 10px;
-      padding: 0.75rem;
-      font-family: var(--cond);
-      font-size: 0.9rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 1rem;
-      transition: opacity 0.15s
-    }
-
-    .cl-confirm-btn:hover {
-      opacity: 0.85
-    }
-
-    .unread-badge {
-      position: absolute;
-      top: 3px;
-      right: 3px;
-      width: 8px;
-      height: 8px;
-      background: var(--red);
-      border-radius: 50%;
-      border: 2px solid var(--bg-2)
-    }
-
-    #app {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      height: 100dvh
-    }
-
-    .hdr {
-      height: 50px;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      gap: 0.875rem;
-      background: var(--bg-1);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      position: relative;
-      z-index: 10
-    }
-
-    .hdr-logo {
-      font-family: var(--cond);
-      font-size: 1.45rem;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      flex-shrink: 0
-    }
-
-    .hdr-logo span {
-      color: var(--red)
-    }
-
-    #hdr-canvas {
-      flex: 1;
-      min-width: 0;
-      height: 38px;
-      display: block
-    }
-
-    .hdr-right {
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-      flex-shrink: 0
-    }
-
-    .ws-pill {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-2)
-    }
-
-    .ws-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--text-3);
-      transition: background 0.3s
-    }
-
-    .ws-dot.live {
-      background: var(--green);
-      animation: pulse-green 2s infinite
-    }
-
-    .ws-dot.off {
-      background: var(--red)
-    }
-
-    .ws-dot.wait {
-      background: var(--orange);
-      animation: blink 0.8s infinite
-    }
-
-    @keyframes pulse-green {
-
-      0%,
-      100% {
-        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5)
-      }
-
-      50% {
-        box-shadow: 0 0 0 6px rgba(0, 255, 136, 0)
-      }
-    }
-
-    .hdr-nav {
-      display: flex;
-      gap: 0.15rem
-    }
-
-    .nav-btn {
-      background: none;
-      border: none;
-      border-radius: 8px;
-      padding: 0.3rem 0.65rem;
-      font-family: var(--cond);
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--text-2);
-      cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-      position: relative
-    }
-
-    .nav-btn:hover {
-      color: var(--text-1);
-      background: var(--bg-3)
-    }
-
-    .body {
-      display: grid;
-      grid-template-columns: 230px 1fr 300px;
-      min-height: 0
-    }
-
-    .left {
-      background: var(--bg-1);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden
-    }
-
-    .sec {
-      padding: 0.875rem;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .sec-title-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.65rem
-    }
-
-    .sec-title {
-      font-family: var(--mono);
-      font-size: 0.57rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--text-3)
-    }
-
-    .detail-back-btn {
-      background: none;
-      border: none;
-      font-family: var(--mono);
-      font-size: 0.58rem;
-      color: var(--cyan);
-      cursor: pointer;
-      letter-spacing: 0.05em;
-      transition: opacity 0.15s;
-      padding: 0
-    }
-
-    .detail-back-btn:hover {
-      opacity: 0.7
-    }
-
-    .stat-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.45rem
-    }
-
-    .stat-box {
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 0.625rem 0.7rem
-    }
-
-    .stat-lbl {
-      font-family: var(--mono);
-      font-size: 0.55rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-3);
-      margin-bottom: 0.2rem
-    }
-
-    .stat-val {
-      font-family: var(--cond);
-      font-size: 1.45rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      line-height: 1
-    }
-
-    .stat-sub {
-      font-size: 0.62rem;
-      color: var(--text-3);
-      margin-top: 0.15rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis
-    }
-
-    .c-red {
-      color: var(--red)
-    }
-
-    .c-orange {
-      color: var(--orange)
-    }
-
-    .c-cyan {
-      color: var(--cyan)
-    }
-
-    .c-green {
-      color: var(--green)
-    }
-
-    .detail-panel {
-      display: flex;
-      flex-direction: column
-    }
-
-    .dp-row {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      padding: 0.32rem 0;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .dp-row:last-child {
-      border-bottom: none
-    }
-
-    .dp-key {
-      font-family: var(--mono);
-      font-size: 0.52rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-3)
-    }
-
-    .dp-val {
-      font-family: var(--cond);
-      font-size: 1rem;
-      font-weight: 700;
-      text-align: right;
-      max-width: 62%
-    }
-
-    .dp-val.sm {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      font-weight: 400;
-      color: var(--text-1)
-    }
-
-    .dp-val.tsun {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: var(--orange)
-    }
-
-    .filter-row {
-      margin-bottom: 0.6rem
-    }
-
-    .filter-lbl {
-      display: flex;
-      justify-content: space-between;
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-2);
-      margin-bottom: 0.3rem
-    }
-
-    .filter-lbl em {
-      color: var(--cyan);
-      font-style: normal
-    }
-
-    input[type=range] {
-      width: 100%;
-      height: 3px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: var(--bg-4);
-      border-radius: 4px;
-      outline: none;
-      cursor: pointer
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--cyan);
-      border: 2px solid var(--bg-1);
-      box-shadow: 0 0 8px var(--cyan-glow)
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem
-    }
-
-    .chip {
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 0.2rem 0.55rem;
-      font-family: var(--mono);
-      font-size: 0.62rem;
-      color: var(--text-2);
-      cursor: pointer;
-      transition: all 0.15s
-    }
-
-    .chip.on {
-      background: var(--cyan-dim);
-      border-color: var(--cyan);
-      color: var(--cyan)
-    }
-
-    .mini-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.5rem;
-      min-height: 0
-    }
-
-    .mini-list::-webkit-scrollbar {
-      width: 2px
-    }
-
-    .mini-list::-webkit-scrollbar-thumb {
-      background: var(--bg-4)
-    }
-
-    .mini-item {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      padding: 0.35rem 0.4rem;
-      border-radius: 7px;
-      cursor: pointer;
-      transition: background 0.12s;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .mini-item:hover {
-      background: var(--bg-3)
-    }
-
-    .mini-item:last-child {
-      border-bottom: none
-    }
-
-    .mini-mag {
-      font-family: var(--cond);
-      font-size: 0.88rem;
-      font-weight: 800;
-      width: 30px;
-      text-align: center;
-      flex-shrink: 0
-    }
-
-    .mini-info {
-      min-width: 0;
-      flex: 1
-    }
-
-    .mini-place {
-      font-size: 0.7rem;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis
-    }
-
-    .mini-time {
-      font-family: var(--mono);
-      font-size: 0.56rem;
-      color: var(--text-3);
-      margin-top: 0.1rem
-    }
-
-    #sidebar {
-      width: auto;
-      height: 100vh;
-      overflow-y: auto;
-      overflow-x: hidden;
-      scroll-behavior: smooth;
-      background: #0d1117;
-      border-right: 1px solid #30363d;
-      box-sizing: border-box;
-      padding-bottom: 20px;
-    }
-
-    .ad-wrap {
-      flex-shrink: 0;
-      border-top: 1px solid var(--border);
-      padding: 0.5rem
-    }
-
-    .ad-outer-container {
-      position: relative;
-      width: auto;
-      height: 250px;
-      margin: 20px auto;
-      background: var(--ad-bg);
-      border: 1px solid var(--ad-border);
-      border-radius: 8px;
-      display: block;
-      overflow: hidden;
-    }
-
-    .ad-placeholder {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-      text-align: center;
-      box-sizing: border-box;
-      z-index: 1
-    }
-
-    .ad-placeholder p {
-      font-size: 10px;
-      color: var(--text-3);
-      margin-bottom: 0.4rem;
-      font-family: var(--mono);
-      line-height: 1.5;
-    }
-
-    .btn-guide-open {
-      font-size: 10px;
-      color: var(--cyan);
-      text-decoration: underline;
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-family: var(--mono)
-    }
-
-    .ad-content-area {
-      width: 300px;
-      height: 250px;
-      z-index: 5;
-    }
-
-    .ad-content-area iframe {
-      max-width: 100% !important;
-      max-height: 100% !important;
-    }
-
-    #ad-guide-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 1500;
-      align-items: center;
-      justify-content: center
-    }
-
-    .ad-modal-body {
-      background: var(--bg-2);
-      padding: 1.5rem;
-      border-radius: 12px;
-      max-width: 90%;
-      width: 360px;
-      border: 1px solid var(--border-2)
-    }
-
-    .ad-modal-body h3 {
-      font-family: var(--cond);
-      font-size: 1.1rem;
-      font-weight: 800;
-      margin-bottom: 0.75rem
-    }
-
-    .ad-modal-body p {
-      font-size: 0.8rem;
-      color: var(--text-2);
-      line-height: 1.6
-    }
-
-    .ad-modal-close {
-      width: 100%;
-      padding: 0.65rem;
-      background: var(--cyan);
-      border: none;
-      color: var(--bg);
-      border-radius: 8px;
-      margin-top: 1rem;
-      cursor: pointer;
-      font-family: var(--cond);
-      font-weight: 700;
-      font-size: 0.9rem
-    }
-
-    .ad-modal-reload {
-      width: 100%;
-      padding: 0.65rem;
-      background: var(--yellow);
-      border: none;
-      color: var(--bg);
-      border-radius: 8px;
-      margin-top: 1rem;
-      cursor: pointer;
-      font-family: var(--cond);
-      font-weight: 700;
-      font-size: 0.9rem
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-      background: #000
-    }
-
-    .leaflet-container {
-      background: #000 !important
-    }
-
-    .leaflet-control-zoom {
-      border: 1px solid var(--border-2) !important;
-      background: var(--bg-2) !important
-    }
-
-    .leaflet-control-zoom a {
-      color: var(--text-2) !important;
-      background: var(--bg-2) !important;
-      border-color: var(--border) !important
-    }
-
-    .leaflet-control-zoom a:hover {
-      color: var(--text-1) !important;
-      background: var(--bg-3) !important
-    }
-
-    .leaflet-control-attribution {
-      display: none !important
-    }
-
-    .leaflet-popup-content-wrapper {
-      background: var(--bg-2) !important;
-      border: 1px solid var(--border-2) !important;
-      border-radius: 12px !important;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
-      color: var(--text-1) !important
-    }
-
-    .leaflet-popup-tip {
-      background: var(--bg-2) !important
-    }
-
-    .leaflet-popup-close-button {
-      color: var(--text-2) !important;
-      right: 8px !important;
-      top: 8px !important;
-      font-size: 18px !important
-    }
-
-    .popup-content {
-      font-family: var(--sans);
-      padding: 0.25rem 0.1rem
-    }
-
-    .popup-mag {
-      font-family: var(--cond);
-      font-size: 1.6rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      line-height: 1;
-      margin-bottom: 0.3rem
-    }
-
-    .popup-place {
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem
-    }
-
-    .popup-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem
-    }
-
-    .popup-tag {
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      color: var(--text-2)
-    }
-
-    .right {
-      background: var(--bg-1);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden
-    }
-
-    .right-hdr {
-      padding: 0.75rem 0.875rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0
-    }
-
-    .right-hdr-title {
-      font-family: var(--cond);
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-2)
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-family: var(--mono);
-      font-size: 0.58rem;
-      color: var(--green)
-    }
-
-    .live-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse-green 2s infinite
-    }
-
-    .eq-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.4rem
-    }
-
-    .eq-list::-webkit-scrollbar {
-      width: 3px
-    }
-
-    .eq-list::-webkit-scrollbar-thumb {
-      background: var(--bg-4);
-      border-radius: 3px
-    }
-
-    .eq-card {
-      position: relative;
-      background: var(--bg-2);
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      padding: 0.75rem;
-      margin-bottom: 0.4rem;
-      cursor: pointer;
-      transition: border-color 0.18s, background 0.18s, transform 0.12s
-    }
-
-    .eq-card:hover:not(.sel) {
-      border-color: rgba(0, 216, 255, 0.28);
-      background: var(--bg-3);
-      transform: translateX(-2px)
-    }
-
-    .eq-card.sel {
-      border-color: var(--cyan) !important;
-      background: var(--bg-3)
-    }
-
-    .eq-card::after {
-      content: '›';
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      opacity: 0;
-      color: var(--cyan);
-      font-size: 1.2rem;
-      font-weight: 900;
-      transition: opacity 0.15s, right 0.15s;
-      pointer-events: none
-    }
-
-    .eq-card:hover::after {
-      opacity: 0.65;
-      right: 0.5rem
-    }
-
-    .eq-card.sel::after {
-      opacity: 1;
-      right: 0.5rem
-    }
-
-    .eq-card.new-in {
-      animation: newIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both
-    }
-
-    .eq-card.new-flash {
-      animation: newIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both, redFlash 1.5s ease both
-    }
-
-    @keyframes newIn {
-      from {
-        opacity: 0;
-        transform: translateX(16px)
-      }
-
-      to {
-        opacity: 1;
-        transform: none
-      }
-    }
-
-    @keyframes redFlash {
-      0% {
-        background: rgba(255, 45, 62, 0.18);
-        border-color: var(--red)
-      }
-
-      100% {
-        background: var(--bg-2);
-        border-color: var(--border)
-      }
-    }
-
-    .eq-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.65rem;
-      margin-bottom: 0.4rem
-    }
-
-    .eq-mbadge {
-      font-family: var(--cond);
-      font-size: 1.2rem;
-      font-weight: 900;
-      line-height: 1;
-      min-width: 40px;
-      text-align: center;
-      padding: 0.2rem 0.35rem;
-      border-radius: 7px;
-      flex-shrink: 0
-    }
-
-    .eq-info {
-      flex: 1;
-      min-width: 0
-    }
-
-    .eq-place {
-      font-size: 0.78rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 0.15rem
-    }
-
-    .eq-time {
-      font-family: var(--mono);
-      font-size: 0.58rem;
-      color: var(--text-3)
-    }
-
-    .eq-tags {
-      display: flex;
-      gap: 0.35rem;
-      flex-wrap: wrap
-    }
-
-    .eq-tag {
-      font-family: var(--mono);
-      font-size: 0.58rem;
-      padding: 0.12rem 0.4rem;
-      border-radius: 4px;
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      color: var(--text-2)
-    }
-
-    .eq-tag.tsun {
-      background: rgba(255, 138, 0, 0.1);
-      color: var(--orange);
-      border-color: rgba(255, 138, 0, 0.25)
-    }
-
-    .i1 {
-      color: #9ec5fe;
-      background: rgba(158, 197, 254, .1)
-    }
-
-    .i2 {
-      color: #60a5fa;
-      background: rgba(96, 165, 250, .1)
-    }
-
-    .i3 {
-      color: #4ade80;
-      background: rgba(74, 222, 128, .1)
-    }
-
-    .i4 {
-      color: #facc15;
-      background: rgba(250, 204, 21, .1)
-    }
-
-    .i5m {
-      color: #fb923c;
-      background: rgba(251, 146, 60, .1)
-    }
-
-    .i5p {
-      color: #f97316;
-      background: rgba(249, 115, 22, .1)
-    }
-
-    .i6m {
-      color: #ef4444;
-      background: rgba(239, 68, 68, .1)
-    }
-
-    .i6p {
-      color: #dc2626;
-      background: rgba(220, 38, 38, .1)
-    }
-
-    .i7 {
-      color: #cc44ff;
-      background: rgba(204, 68, 255, .1)
-    }
-
-    .iunk {
-      color: var(--text-3);
-      background: var(--bg-3)
-    }
-
-    .m-lo {
-      color: #4ade80
-    }
-
-    .m-md {
-      color: #facc15
-    }
-
-    .m-hi {
-      color: #fb923c
-    }
-
-    .m-mj {
-      color: #ef4444
-    }
-
-    .m-cr {
-      color: #cc44ff
-    }
-
-    .no-data {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-      color: var(--text-3);
-      padding: 2rem 0
-    }
-
-    .no-data-icon {
-      font-size: 1.8rem
-    }
-
-    .no-data-txt {
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.1em
-    }
-
-    #eq-alert {
-      position: fixed;
-      top: 62px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-130px);
-      z-index: 700;
-      background: var(--bg-2);
-      border: 1px solid var(--red);
-      border-radius: 14px;
-      padding: 0.9rem 1.25rem;
-      min-width: 300px;
-      max-width: 92vw;
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-      box-shadow: 0 8px 40px var(--red-glow);
-      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)
-    }
-
-    #eq-alert.show {
-      transform: translateX(-50%) translateY(0)
-    }
-
-    .alrt-icon {
-      font-size: 1.9rem;
-      flex-shrink: 0
-    }
-
-    .alrt-title {
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--red);
-      margin-bottom: 0.15rem
-    }
-
-    .alrt-place {
-      font-size: 0.88rem;
-      font-weight: 600;
-      margin-bottom: 0.1rem
-    }
-
-    .alrt-detail {
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      color: var(--text-2)
-    }
-
-    .alrt-bar-wrap {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      border-radius: 0 0 14px 14px;
-      overflow: hidden
-    }
-
-    .alrt-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--red), var(--orange));
-      width: 100%;
-      transform-origin: left;
-      animation: alrtShrink 6s linear forwards
-    }
-
-    @keyframes alrtShrink {
-      from {
-        transform: scaleX(1)
-      }
-
-      to {
-        transform: scaleX(0)
-      }
-    }
-
-    .eew-flash {
-      position: fixed;
-      inset: 0;
-      z-index: 600;
-      pointer-events: none;
-      border: 4px solid var(--red);
-      animation: eewBlink 0.4s steps(1) 8 both
-    }
-
-    @keyframes eewBlink {
-
-      0%,
-      50% {
-        opacity: 1;
-        background: rgba(255, 45, 62, 0.04)
-      }
-
-      25%,
-      75% {
-        opacity: 0;
-        background: transparent
-      }
-    }
-
-    @keyframes xAppear {
-      from {
-        transform: scale(0) rotate(30deg);
-        opacity: 0
-      }
-
-      to {
-        transform: scale(1) rotate(0);
-        opacity: 1
-      }
-    }
-
-    @media(max-width:920px) {
-      .body {
-        grid-template-columns: 0 1fr 260px
-      }
-
-      .left {
-        display: none
-      }
-    }
-
-    @media(max-width:620px) {
-      .body {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 260px
-      }
-
-      .right {
-        border-left: none;
-        border-top: 1px solid var(--border)
-      }
-
-      #hdr-canvas {
-        display: none
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEISMO — リアルタイム地震モニター</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
+    <script src="cityCoords.js"></script>
+    <style>
+        :root {
+            --bg: #030507;
+            --bg-1: #070a10;
+            --bg-2: #0b0f18;
+            --bg-3: #10151f;
+            --bg-4: #161c28;
+            --red: #ff2d3e;
+            --red-dim: rgba(255, 45, 62, 0.12);
+            --red-glow: rgba(255, 45, 62, 0.3);
+            --orange: #ff8a00;
+            --cyan: #00d8ff;
+            --cyan-dim: rgba(0, 216, 255, 0.08);
+            --cyan-glow: rgba(0, 216, 255, 0.25);
+            --green: #00ff88;
+            --purple: #cc44ff;
+            --yellow: #ffff34;
+            --text-1: #e8eef8;
+            --text-2: #6e7f96;
+            --text-3: #2e3d52;
+            --border: rgba(0, 216, 255, 0.07);
+            --border-2: rgba(0, 216, 255, 0.14);
+            --mono: 'Share Tech Mono', monospace;
+            --sans: 'Barlow', sans-serif;
+            --cond: 'Barlow Condensed', sans-serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text-1);
+            height: 100dvh;
+            -webkit-font-smoothing: antialiased
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, 0.012) 3px, rgba(0, 0, 0, 0.012) 4px)
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.7s ease
+        }
+
+        #loading.fade-out {
+            opacity: 0;
+            pointer-events: none
+        }
+
+        .ld-logo {
+            font-family: var(--cond);
+            font-size: 5.5rem;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            color: var(--text-1);
+            line-height: 1;
+            margin-bottom: 0.15rem;
+            user-select: none
+        }
+
+        .ld-logo span {
+            color: var(--red)
+        }
+
+        .ld-sub {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            letter-spacing: 0.35em;
+            color: var(--text-3);
+            text-transform: uppercase;
+            margin-bottom: 2.5rem
+        }
+
+        #ld-canvas {
+            display: block;
+            width: 420px;
+            height: 72px;
+            margin-bottom: 1.5rem
+        }
+
+        .ld-status {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-2);
+            letter-spacing: 0.08em;
+            min-height: 1.2em
+        }
+
+        .ld-bar-wrap {
+            width: 420px;
+            height: 2px;
+            background: var(--bg-3);
+            border-radius: 2px;
+            margin-top: 1rem;
+            overflow: hidden
+        }
+
+        .ld-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--red), var(--orange));
+            width: 0;
+            border-radius: 2px
+        }
+
+        @keyframes blink {
+
+            0%,
+            80%,
+            100% {
+                opacity: .25
+            }
+
+            40% {
+                opacity: 1
+            }
+        }
+
+        .blink {
+            animation: blink 0.9s infinite
+        }
+
+        .blink2 {
+            animation: blink 0.9s 0.2s infinite
+        }
+
+        .blink3 {
+            animation: blink 0.9s 0.4s infinite
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 800;
+            padding: 1rem;
+            animation: fadeIn 0.2s ease both
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(36px) scale(0.96)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .close-btn {
+            background: var(--bg-3);
+            border: 1px solid var(--border-2);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: color 0.15s, background 0.15s;
+            flex-shrink: 0
+        }
+
+        .close-btn:hover {
+            color: var(--text-1);
+            background: var(--bg-4)
+        }
+
+        .close-btn svg {
+            pointer-events: none
+        }
+
+        .tutorial-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border-2);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 92dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        .tutorial-head {
+            padding: 1.75rem 1.75rem 1.25rem;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .tutorial-eyebrow {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.25em;
+            color: var(--red);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem
+        }
+
+        .tutorial-h1 {
+            font-family: var(--cond);
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1
+        }
+
+        .tutorial-h1 span {
+            color: var(--red)
+        }
+
+        .tutorial-desc {
+            font-size: 0.85rem;
+            color: var(--text-2);
+            margin-top: 0.45rem;
+            line-height: 1.5
+        }
+
+        .tutorial-body {
+            padding: 1.25rem 1.75rem;
+            overflow-y: auto;
+            flex: 1
+        }
+
+        .tutorial-body::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .tutorial-body::-webkit-scrollbar-thumb {
+            background: var(--bg-4)
+        }
+
+        .feat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            margin-bottom: 1rem
+        }
+
+        .feat-card {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.875rem
+        }
+
+        .feat-icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.4rem
+        }
+
+        .feat-name {
+            font-family: var(--cond);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 0.2rem
+        }
+
+        .feat-text {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            line-height: 1.55
+        }
+
+        .int-legend {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem
+        }
+
+        .int-legend-title {
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            letter-spacing: 0.2em;
+            color: var(--text-3);
+            text-transform: uppercase;
+            margin-bottom: 0.7rem
+        }
+
+        .int-rows {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.3rem 1rem
+        }
+
+        .int-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem
+        }
+
+        .int-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .int-lbl {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            color: var(--text-2)
+        }
+
+        .tutorial-foot {
+            padding: 1rem 1.75rem 1.5rem;
+            border-top: 1px solid var(--border)
+        }
+
+        .start-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #ff2d3e, #ff6a00);
+            border: none;
+            border-radius: 12px;
+            padding: 0.9rem;
+            font-family: var(--cond);
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #fff;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.15s;
+            box-shadow: 0 4px 28px var(--red-glow)
+        }
+
+        .start-btn:hover {
+            opacity: 0.85;
+            transform: translateY(-1px)
+        }
+
+        .start-btn:active {
+            transform: none
+        }
+
+        .changelog-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border-2);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 82dvh;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+            overflow: hidden
+        }
+
+        .changelog-hdr {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .changelog-hdr-title {
+            font-family: var(--cond);
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.02em
+        }
+
+        .changelog-scroll {
+            overflow-y: auto;
+            padding: 1.25rem 1.5rem;
+            flex: 1
+        }
+
+        .changelog-scroll::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .changelog-scroll::-webkit-scrollbar-thumb {
+            background: var(--bg-4)
+        }
+
+        .cl-item {
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .cl-item:first-child {
+            padding-top: 0
+        }
+
+        .cl-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0
+        }
+
+        .cl-item-hdr {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.45rem
+        }
+
+        .cl-ver {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(255, 45, 62, 0.2);
+            border-radius: 5px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            padding: 0.12rem 0.45rem
+        }
+
+        .cl-date {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            color: var(--text-3)
+        }
+
+        .cl-title {
+            font-family: var(--cond);
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem
+        }
+
+        .cl-desc {
+            font-size: 0.82rem;
+            color: var(--text-2);
+            line-height: 1.7;
+            white-space: pre-wrap
+        }
+
+        .cl-confirm-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #ff2d3e, #ff6a00);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-family: var(--cond);
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: opacity 0.15s
+        }
+
+        .cl-confirm-btn:hover {
+            opacity: 0.85
+        }
+
+        .unread-badge {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 8px;
+            height: 8px;
+            background: var(--red);
+            border-radius: 50%;
+            border: 2px solid var(--bg-2)
+        }
+
+        #app {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100dvh
+        }
+
+        .hdr {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            gap: 0.875rem;
+            background: var(--bg-1);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10
+        }
+
+        .hdr-logo {
+            font-family: var(--cond);
+            font-size: 1.45rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            flex-shrink: 0
+        }
+
+        .hdr-logo span {
+            color: var(--red)
+        }
+
+        #hdr-canvas {
+            flex: 1;
+            min-width: 0;
+            height: 38px;
+            display: block
+        }
+
+        .hdr-right {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            flex-shrink: 0
+        }
+
+        .ws-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-2)
+        }
+
+        .ws-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text-3);
+            transition: background 0.3s
+        }
+
+        .ws-dot.live {
+            background: var(--green);
+            animation: pulse-green 2s infinite
+        }
+
+        .ws-dot.off {
+            background: var(--red)
+        }
+
+        .ws-dot.wait {
+            background: var(--orange);
+            animation: blink 0.8s infinite
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5)
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(0, 255, 136, 0)
+            }
+        }
+
+        .hdr-nav {
+            display: flex;
+            gap: 0.15rem
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            border-radius: 8px;
+            padding: 0.3rem 0.65rem;
+            font-family: var(--cond);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: color 0.15s, background 0.15s;
+            position: relative
+        }
+
+        .nav-btn:hover {
+            color: var(--text-1);
+            background: var(--bg-3)
+        }
+
+        .body {
+            display: grid;
+            grid-template-columns: 230px 1fr 300px;
+            min-height: 0
+        }
+
+        .left {
+            background: var(--bg-1);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .sec {
+            padding: 0.875rem;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .sec-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.65rem
+        }
+
+        .sec-title {
+            font-family: var(--mono);
+            font-size: 0.57rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--text-3)
+        }
+
+        .detail-back-btn {
+            background: none;
+            border: none;
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            color: var(--cyan);
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            transition: opacity 0.15s;
+            padding: 0
+        }
+
+        .detail-back-btn:hover {
+            opacity: 0.7
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.45rem
+        }
+
+        .stat-box {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 0.625rem 0.7rem
+        }
+
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            margin-bottom: 0.2rem
+        }
+
+        .stat-val {
+            font-family: var(--cond);
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1
+        }
+
+        .stat-sub {
+            font-size: 0.62rem;
+            color: var(--text-3);
+            margin-top: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .c-red {
+            color: var(--red)
+        }
+
+        .c-orange {
+            color: var(--orange)
+        }
+
+        .c-cyan {
+            color: var(--cyan)
+        }
+
+        .c-green {
+            color: var(--green)
+        }
+
+        .detail-panel {
+            display: flex;
+            flex-direction: column
+        }
+
+        .dp-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            padding: 0.32rem 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .dp-row:last-child {
+            border-bottom: none
+        }
+
+        .dp-key {
+            font-family: var(--mono);
+            font-size: 0.52rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-3)
+        }
+
+        .dp-val {
+            font-family: var(--cond);
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: right;
+            max-width: 62%
+        }
+
+        .dp-val.sm {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            font-weight: 400;
+            color: var(--text-1)
+        }
+
+        .dp-val.tsun {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--orange)
+        }
+
+        .filter-row {
+            margin-bottom: 0.6rem
+        }
+
+        .filter-lbl {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-2);
+            margin-bottom: 0.3rem
+        }
+
+        .filter-lbl em {
+            color: var(--cyan);
+            font-style: normal
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 3px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--bg-4);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--cyan);
+            border: 2px solid var(--bg-1);
+            box-shadow: 0 0 8px var(--cyan-glow)
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem
+        }
+
+        .chip {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 0.2rem 0.55rem;
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 0.15s
+        }
+
+        .chip.on {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan)
+        }
+
+        .mini-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+            min-height: 0
+        }
+
+        .mini-list::-webkit-scrollbar {
+            width: 2px
+        }
+
+        .mini-list::-webkit-scrollbar-thumb {
+            background: var(--bg-4)
+        }
+
+        .mini-item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.4rem;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background 0.12s;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .mini-item:hover {
+            background: var(--bg-3)
+        }
+
+        .mini-item:last-child {
+            border-bottom: none
+        }
+
+        .mini-mag {
+            font-family: var(--cond);
+            font-size: 0.88rem;
+            font-weight: 800;
+            width: 30px;
+            text-align: center;
+            flex-shrink: 0
+        }
+
+        .mini-info {
+            min-width: 0;
+            flex: 1
+        }
+
+        .mini-place {
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .mini-time {
+            font-family: var(--mono);
+            font-size: 0.56rem;
+            color: var(--text-3);
+            margin-top: 0.1rem
+        }
+
+        #sidebar {
+            width: auto;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            box-sizing: border-box;
+            padding-bottom: 20px;
+        }
+
+        .ad-wrap {
+            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            padding: 0.5rem
+        }
+
+        .ad-outer-container {
+            position: relative;
+            width: auto;
+            height: 250px;
+            margin: 20px auto;
+            background: var(--ad-bg);
+            border: 1px solid var(--ad-border);
+            border-radius: 8px;
+            display: block;
+            overflow: hidden;
+        }
+
+        .ad-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            text-align: center;
+            box-sizing: border-box;
+            z-index: 1
+        }
+
+        .ad-placeholder p {
+            font-size: 10px;
+            color: var(--text-3);
+            margin-bottom: 0.4rem;
+            font-family: var(--mono);
+            line-height: 1.5;
+        }
+
+        .btn-guide-open {
+            font-size: 10px;
+            color: var(--cyan);
+            text-decoration: underline;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: var(--mono)
+        }
+
+        .ad-content-area {
+            width: 300px;
+            height: 250px;
+            z-index: 5;
+        }
+
+        .ad-content-area iframe {
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+
+        #ad-guide-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1500;
+            align-items: center;
+            justify-content: center
+        }
+
+        .ad-modal-body {
+            background: var(--bg-2);
+            padding: 1.5rem;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 360px;
+            border: 1px solid var(--border-2)
+        }
+
+        .ad-modal-body h3 {
+            font-family: var(--cond);
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem
+        }
+
+        .ad-modal-body p {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            line-height: 1.6
+        }
+
+        .ad-modal-close {
+            width: 100%;
+            padding: 0.65rem;
+            background: var(--cyan);
+            border: none;
+            color: var(--bg);
+            border-radius: 8px;
+            margin-top: 1rem;
+            cursor: pointer;
+            font-family: var(--cond);
+            font-weight: 700;
+            font-size: 0.9rem
+        }
+
+        .ad-modal-reload {
+            width: 100%;
+            padding: 0.65rem;
+            background: var(--yellow);
+            border: none;
+            color: var(--bg);
+            border-radius: 8px;
+            margin-top: 1rem;
+            cursor: pointer;
+            font-family: var(--cond);
+            font-weight: 700;
+            font-size: 0.9rem
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #000
+        }
+
+        .leaflet-container {
+            background: #000 !important
+        }
+
+        .leaflet-control-zoom {
+            border: 1px solid var(--border-2) !important;
+            background: var(--bg-2) !important
+        }
+
+        .leaflet-control-zoom a {
+            color: var(--text-2) !important;
+            background: var(--bg-2) !important;
+            border-color: var(--border) !important
+        }
+
+        .leaflet-control-zoom a:hover {
+            color: var(--text-1) !important;
+            background: var(--bg-3) !important
+        }
+
+        .leaflet-control-attribution {
+            display: none !important
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-2) !important;
+            border: 1px solid var(--border-2) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+            color: var(--text-1) !important
+        }
+
+        .leaflet-popup-tip {
+            background: var(--bg-2) !important
+        }
+
+        .leaflet-popup-close-button {
+            color: var(--text-2) !important;
+            right: 8px !important;
+            top: 8px !important;
+            font-size: 18px !important
+        }
+
+        .popup-content {
+            font-family: var(--sans);
+            padding: 0.25rem 0.1rem
+        }
+
+        .popup-mag {
+            font-family: var(--cond);
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin-bottom: 0.3rem
+        }
+
+        .popup-place {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem
+        }
+
+        .popup-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem
+        }
+
+        .popup-tag {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            color: var(--text-2)
+        }
+
+        .right {
+            background: var(--bg-1);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .right-hdr {
+            padding: 0.75rem 0.875rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0
+        }
+
+        .right-hdr-title {
+            font-family: var(--cond);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-2)
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            color: var(--green)
+        }
+
+        .live-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse-green 2s infinite
+        }
+
+        .eq-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.4rem
+        }
+
+        .eq-list::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .eq-list::-webkit-scrollbar-thumb {
+            background: var(--bg-4);
+            border-radius: 3px
+        }
+
+        .eq-card {
+            position: relative;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            padding: 0.75rem;
+            margin-bottom: 0.4rem;
+            cursor: pointer;
+            transition: border-color 0.18s, background 0.18s, transform 0.12s
+        }
+
+        .eq-card:hover:not(.sel) {
+            border-color: rgba(0, 216, 255, 0.28);
+            background: var(--bg-3);
+            transform: translateX(-2px)
+        }
+
+        .eq-card.sel {
+            border-color: var(--cyan) !important;
+            background: var(--bg-3)
+        }
+
+        .eq-card::after {
+            content: '›';
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            color: var(--cyan);
+            font-size: 1.2rem;
+            font-weight: 900;
+            transition: opacity 0.15s, right 0.15s;
+            pointer-events: none
+        }
+
+        .eq-card:hover::after {
+            opacity: 0.65;
+            right: 0.5rem
+        }
+
+        .eq-card.sel::after {
+            opacity: 1;
+            right: 0.5rem
+        }
+
+        .eq-card.new-in {
+            animation: newIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        .eq-card.new-flash {
+            animation: newIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both, redFlash 1.5s ease both
+        }
+
+        @keyframes newIn {
+            from {
+                opacity: 0;
+                transform: translateX(16px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        @keyframes redFlash {
+            0% {
+                background: rgba(255, 45, 62, 0.18);
+                border-color: var(--red)
+            }
+
+            100% {
+                background: var(--bg-2);
+                border-color: var(--border)
+            }
+        }
+
+        .eq-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            margin-bottom: 0.4rem
+        }
+
+        .eq-mbadge {
+            font-family: var(--cond);
+            font-size: 1.2rem;
+            font-weight: 900;
+            line-height: 1;
+            min-width: 40px;
+            text-align: center;
+            padding: 0.2rem 0.35rem;
+            border-radius: 7px;
+            flex-shrink: 0
+        }
+
+        .eq-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .eq-place {
+            font-size: 0.78rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.15rem
+        }
+
+        .eq-time {
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            color: var(--text-3)
+        }
+
+        .eq-tags {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap
+        }
+
+        .eq-tag {
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            padding: 0.12rem 0.4rem;
+            border-radius: 4px;
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            color: var(--text-2)
+        }
+
+        .eq-tag.tsun {
+            background: rgba(255, 138, 0, 0.1);
+            color: var(--orange);
+            border-color: rgba(255, 138, 0, 0.25)
+        }
+
+        .i1 {
+            color: #9ec5fe;
+            background: rgba(158, 197, 254, .1)
+        }
+
+        .i2 {
+            color: #60a5fa;
+            background: rgba(96, 165, 250, .1)
+        }
+
+        .i3 {
+            color: #4ade80;
+            background: rgba(74, 222, 128, .1)
+        }
+
+        .i4 {
+            color: #facc15;
+            background: rgba(250, 204, 21, .1)
+        }
+
+        .i5m {
+            color: #fb923c;
+            background: rgba(251, 146, 60, .1)
+        }
+
+        .i5p {
+            color: #f97316;
+            background: rgba(249, 115, 22, .1)
+        }
+
+        .i6m {
+            color: #ef4444;
+            background: rgba(239, 68, 68, .1)
+        }
+
+        .i6p {
+            color: #dc2626;
+            background: rgba(220, 38, 38, .1)
+        }
+
+        .i7 {
+            color: #cc44ff;
+            background: rgba(204, 68, 255, .1)
+        }
+
+        .iunk {
+            color: var(--text-3);
+            background: var(--bg-3)
+        }
+
+        .m-lo {
+            color: #4ade80
+        }
+
+        .m-md {
+            color: #facc15
+        }
+
+        .m-hi {
+            color: #fb923c
+        }
+
+        .m-mj {
+            color: #ef4444
+        }
+
+        .m-cr {
+            color: #cc44ff
+        }
+
+        .no-data {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            color: var(--text-3);
+            padding: 2rem 0
+        }
+
+        .no-data-icon {
+            font-size: 1.8rem
+        }
+
+        .no-data-txt {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.1em
+        }
+
+        #eq-alert {
+            position: fixed;
+            top: 62px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-130px);
+            z-index: 700;
+            background: var(--bg-2);
+            border: 1px solid var(--red);
+            border-radius: 14px;
+            padding: 0.9rem 1.25rem;
+            min-width: 300px;
+            max-width: 92vw;
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            box-shadow: 0 8px 40px var(--red-glow);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)
+        }
+
+        #eq-alert.show {
+            transform: translateX(-50%) translateY(0)
+        }
+
+        .alrt-icon {
+            font-size: 1.9rem;
+            flex-shrink: 0
+        }
+
+        .alrt-title {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--red);
+            margin-bottom: 0.15rem
+        }
+
+        .alrt-place {
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 0.1rem
+        }
+
+        .alrt-detail {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-2)
+        }
+
+        .alrt-bar-wrap {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            border-radius: 0 0 14px 14px;
+            overflow: hidden
+        }
+
+        .alrt-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--red), var(--orange));
+            width: 100%;
+            transform-origin: left;
+            animation: alrtShrink 6s linear forwards
+        }
+
+        @keyframes alrtShrink {
+            from {
+                transform: scaleX(1)
+            }
+
+            to {
+                transform: scaleX(0)
+            }
+        }
+
+        .eew-flash {
+            position: fixed;
+            inset: 0;
+            z-index: 600;
+            pointer-events: none;
+            border: 4px solid var(--red);
+            animation: eewBlink 0.4s steps(1) 8 both
+        }
+
+        @keyframes eewBlink {
+
+            0%,
+            50% {
+                opacity: 1;
+                background: rgba(255, 45, 62, 0.04)
+            }
+
+            25%,
+            75% {
+                opacity: 0;
+                background: transparent
+            }
+        }
+
+        @keyframes xAppear {
+            from {
+                transform: scale(0) rotate(30deg);
+                opacity: 0
+            }
+
+            to {
+                transform: scale(1) rotate(0);
+                opacity: 1
+            }
+        }
+
+        @media(max-width:920px) {
+            .body {
+                grid-template-columns: 0 1fr 260px
+            }
+
+            .left {
+                display: none
+            }
+        }
+
+        @media(max-width:620px) {
+            .body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 260px
+            }
+
+            .right {
+                border-left: none;
+                border-top: 1px solid var(--border)
+            }
+
+            #hdr-canvas {
+                display: none
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-  <div id="loading">
-    <div class="ld-logo">SEISMO<span>.</span></div>
-    <div class="ld-sub">リアルタイム地震モニター</div>
-    <canvas id="ld-canvas" width="420" height="72"></canvas>
-    <div class="ld-status" id="ld-status">接続中<span class="blink">.</span><span class="blink2">.</span><span
-        class="blink3">.</span></div>
-    <div class="ld-bar-wrap">
-      <div class="ld-bar" id="ld-bar"></div>
+    <div id="loading">
+        <div class="ld-logo">SEISMO<span>.</span></div>
+        <div class="ld-sub">リアルタイム地震モニター</div>
+        <canvas id="ld-canvas" width="420" height="72"></canvas>
+        <div class="ld-status" id="ld-status">接続中<span class="blink">.</span><span class="blink2">.</span><span
+                class="blink3">.</span></div>
+        <div class="ld-bar-wrap">
+            <div class="ld-bar" id="ld-bar"></div>
+        </div>
     </div>
-  </div>
 
-  <div class="overlay hidden" id="tutorial-overlay">
-    <div class="tutorial-card">
-      <div class="tutorial-head">
-        <div class="tutorial-eyebrow">はじめに — GUIDE</div>
-        <div class="tutorial-h1">SEISMO<span>.</span> の使い方</div>
-        <div class="tutorial-desc">P2P地震情報WebSocketを使ったリアルタイム地震モニタリングシステム</div>
-      </div>
-      <div class="tutorial-body">
-        <div class="feat-grid">
-          <div class="feat-card">
-            <div class="feat-icon">🗺️</div>
-            <div class="feat-name">リアルタイムマップ</div>
-            <div class="feat-text">震源地を×マーカーで即時反映。クリックで震度分布を細分区域ごとに可視化。</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon">📡</div>
-            <div class="feat-name">WebSocket受信</div>
-            <div class="feat-text">P2P地震情報からリアルタイムで気象庁データを受信。自動再接続機能付き。</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon">🌊</div>
-            <div class="feat-name">P波・S波アニメーション</div>
-            <div class="feat-text">地震発生時に震源からP波（赤）・S波（橙）が広がるアニメーションを表示。自動追尾。</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon">🔔</div>
-            <div class="feat-name">地震アラート</div>
-            <div class="feat-text">M4.0以上または震度4以上を自動検知してポップアップ通知。EEW受信時は画面点滅。</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon">📊</div>
-            <div class="feat-name">詳細サイドパネル</div>
-            <div class="feat-text">リスト選択で左パネルに震源地・M・震度・深さ・時刻を詳細表示。</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon">🔍</div>
-            <div class="feat-name">フィルター機能</div>
-            <div class="feat-text">マグニチュード・最大震度でリストとマップを絞り込み。スライダーとチップで直感操作。</div>
-          </div>
+    <div class="overlay hidden" id="tutorial-overlay">
+        <div class="tutorial-card">
+            <div class="tutorial-head">
+                <div class="tutorial-eyebrow">はじめに — GUIDE</div>
+                <div class="tutorial-h1">SEISMO<span>.</span> の使い方</div>
+                <div class="tutorial-desc">P2P地震情報WebSocketを使ったリアルタイム地震モニタリングシステム</div>
+            </div>
+            <div class="tutorial-body">
+                <div class="feat-grid">
+                    <div class="feat-card">
+                        <div class="feat-icon">🗺️</div>
+                        <div class="feat-name">リアルタイムマップ</div>
+                        <div class="feat-text">震源地を×マーカーで即時反映。クリックで震度分布を細分区域ごとに可視化。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">📡</div>
+                        <div class="feat-name">WebSocket受信</div>
+                        <div class="feat-text">P2P地震情報からリアルタイムで気象庁データを受信。自動再接続機能付き。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🌊</div>
+                        <div class="feat-name">P波・S波アニメーション</div>
+                        <div class="feat-text">地震発生時に震源からP波（赤）・S波（橙）が広がるアニメーションを表示。自動追尾。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🔔</div>
+                        <div class="feat-name">地震アラート</div>
+                        <div class="feat-text">M4.0以上または震度4以上を自動検知してポップアップ通知。EEW受信時は画面点滅。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">📊</div>
+                        <div class="feat-name">詳細サイドパネル</div>
+                        <div class="feat-text">リスト選択で左パネルに震源地・M・震度・深さ・時刻を詳細表示。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🔍</div>
+                        <div class="feat-name">フィルター機能</div>
+                        <div class="feat-text">マグニチュード・最大震度でリストとマップを絞り込み。スライダーとチップで直感操作。</div>
+                    </div>
+                </div>
+                <div class="int-legend">
+                    <div class="int-legend-title">震度カラーコード（マーカー・バッジ・分布共通）</div>
+                    <div class="int-rows">
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#9ec5fe"></div><span class="int-lbl">震度1</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#60a5fa"></div><span class="int-lbl">震度2</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#4ade80"></div><span class="int-lbl">震度3</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#facc15"></div><span class="int-lbl">震度4</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#fb923c"></div><span class="int-lbl">震度5弱</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#f97316"></div><span class="int-lbl">震度5強</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#ef4444"></div><span class="int-lbl">震度6弱</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#dc2626"></div><span class="int-lbl">震度6強</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#cc44ff"></div><span class="int-lbl">震度7</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tutorial-foot">
+                <button class="start-btn" id="tutorial-start">モニタリングを開始する →</button>
+            </div>
         </div>
-        <div class="int-legend">
-          <div class="int-legend-title">震度カラーコード（マーカー・バッジ・分布共通）</div>
-          <div class="int-rows">
-            <div class="int-row">
-              <div class="int-dot" style="background:#9ec5fe"></div><span class="int-lbl">震度1</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#60a5fa"></div><span class="int-lbl">震度2</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#4ade80"></div><span class="int-lbl">震度3</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#facc15"></div><span class="int-lbl">震度4</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#fb923c"></div><span class="int-lbl">震度5弱</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#f97316"></div><span class="int-lbl">震度5強</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#ef4444"></div><span class="int-lbl">震度6弱</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#dc2626"></div><span class="int-lbl">震度6強</span>
-            </div>
-            <div class="int-row">
-              <div class="int-dot" style="background:#cc44ff"></div><span class="int-lbl">震度7</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="tutorial-foot">
-        <button class="start-btn" id="tutorial-start">モニタリングを開始する →</button>
-      </div>
     </div>
-  </div>
 
-  <div class="overlay hidden" id="changelog-overlay">
-    <div class="changelog-card">
-      <div class="changelog-hdr">
-        <div class="changelog-hdr-title">アップデートログ</div>
-        <button class="close-btn" id="changelog-close">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-            <path
-              d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-          </svg>
-        </button>
-      </div>
-      <div class="changelog-scroll">
-        <div id="changelog-list"></div>
-        <button class="cl-confirm-btn hidden" id="changelog-confirm">確認して閉じる</button>
-      </div>
+    <div class="overlay hidden" id="changelog-overlay">
+        <div class="changelog-card">
+            <div class="changelog-hdr">
+                <div class="changelog-hdr-title">アップデートログ</div>
+                <button class="close-btn" id="changelog-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16"
+                        height="16">
+                        <path
+                            d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="changelog-scroll">
+                <div id="changelog-list"></div>
+                <button class="cl-confirm-btn hidden" id="changelog-confirm">確認して閉じる</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div id="app" class="hidden">
-    <header class="hdr">
-      <div class="hdr-logo">SEISMO<span>.</span></div>
-      <canvas id="hdr-canvas"></canvas>
-      <div class="hdr-right">
-        <div class="ws-pill">
-          <div class="ws-dot wait" id="ws-dot"></div>
-          <span id="ws-label">接続中</span>
-        </div>
-        <nav class="hdr-nav">
-          <button class="nav-btn" id="help-btn">ヘルプ</button>
-          <button class="nav-btn" id="changelog-btn" style="position:relative">更新履歴</button>
-        </nav>
-      </div>
-    </header>
+    <div id="app" class="hidden">
+        <header class="hdr">
+            <div class="hdr-logo">SEISMO<span>.</span></div>
+            <canvas id="hdr-canvas"></canvas>
+            <div class="hdr-right">
+                <div class="ws-pill">
+                    <div class="ws-dot wait" id="ws-dot"></div>
+                    <span id="ws-label">接続中</span>
+                </div>
+                <nav class="hdr-nav">
+                    <button class="nav-btn" id="help-btn">ヘルプ</button>
+                    <button class="nav-btn" id="changelog-btn" style="position:relative">更新履歴</button>
+                </nav>
+            </div>
+        </header>
 
-    <div class="body">
-      <div id="sidebar" class="left">
-        <div class="sec">
-          <div class="sec-title-row">
-            <div class="sec-title" id="left-panel-title">本日の統計</div>
-            <button class="detail-back-btn hidden" id="detail-back">← 戻る</button>
-          </div>
-          <div class="stat-grid" id="stat-grid">
-            <div class="stat-box">
-              <div class="stat-lbl">発生件数</div>
-              <div class="stat-val c-cyan" id="s-count">—</div>
-              <div class="stat-sub">今日</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-lbl">最大 M</div>
-              <div class="stat-val c-red" id="s-maxmag">—</div>
-              <div class="stat-sub" id="s-maxmag-place">—</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-lbl">最大震度</div>
-              <div class="stat-val c-orange" id="s-maxint">—</div>
-              <div class="stat-sub">観測</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-lbl">総受信</div>
-              <div class="stat-val c-green" id="s-total">0</div>
-              <div class="stat-sub">件</div>
-            </div>
-          </div>
-          <div class="detail-panel hidden" id="detail-panel"></div>
-        </div>
-        <div class="sec">
-          <div class="sec-title-row" style="margin-bottom:0.65rem">
-            <div class="sec-title">フィルター</div>
-          </div>
-          <div class="filter-row">
-            <div class="filter-lbl">最小 M <em id="fmv">1.0+</em></div>
-            <input type="range" id="fmag" min="1" max="7" step="0.5" value="1">
-          </div>
-          <div class="filter-row" style="margin-bottom:0">
-            <div class="filter-lbl">最大震度 <em id="fiv">全て</em></div>
-            <div class="chips" id="fint">
-              <div class="chip on" data-int="-1">全て</div>
-              <div class="chip" data-int="10">1+</div>
-              <div class="chip" data-int="20">2+</div>
-              <div class="chip" data-int="30">3+</div>
-              <div class="chip" data-int="40">4+</div>
-              <div class="chip" data-int="45">5弱+</div>
-            </div>
-          </div>
-        </div>
-        <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
-          <div class="sec-title">本日の地震 — アクティビティ</div>
-        </div>
+        <div class="body">
+            <div id="sidebar" class="left">
+                <div class="sec">
+                    <div class="sec-title-row">
+                        <div class="sec-title" id="left-panel-title">本日の統計</div>
+                        <button class="detail-back-btn hidden" id="detail-back">← 戻る</button>
+                    </div>
+                    <div class="stat-grid" id="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-lbl">発生件数</div>
+                            <div class="stat-val c-cyan" id="s-count">—</div>
+                            <div class="stat-sub">今日</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">最大 M</div>
+                            <div class="stat-val c-red" id="s-maxmag">—</div>
+                            <div class="stat-sub" id="s-maxmag-place">—</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">最大震度</div>
+                            <div class="stat-val c-orange" id="s-maxint">—</div>
+                            <div class="stat-sub">観測</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">総受信</div>
+                            <div class="stat-val c-green" id="s-total">0</div>
+                            <div class="stat-sub">件</div>
+                        </div>
+                    </div>
+                    <div class="detail-panel hidden" id="detail-panel"></div>
+                </div>
+                <div class="sec">
+                    <div class="sec-title-row" style="margin-bottom:0.65rem">
+                        <div class="sec-title">フィルター</div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-lbl">最小 M <em id="fmv">1.0+</em></div>
+                        <input type="range" id="fmag" min="1" max="7" step="0.5" value="1">
+                    </div>
+                    <div class="filter-row" style="margin-bottom:0">
+                        <div class="filter-lbl">最大震度 <em id="fiv">全て</em></div>
+                        <div class="chips" id="fint">
+                            <div class="chip on" data-int="-1">全て</div>
+                            <div class="chip" data-int="10">1+</div>
+                            <div class="chip" data-int="20">2+</div>
+                            <div class="chip" data-int="30">3+</div>
+                            <div class="chip" data-int="40">4+</div>
+                            <div class="chip" data-int="45">5弱+</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
+                    <div class="sec-title">本日の地震 — アクティビティ</div>
+                </div>
 
-        <div class="scroll-area">
-          <div class="mini-list" id="mini-list">
-            <div class="no-data">
-              <div class="no-data-icon">📡</div>
-              <div class="no-data-txt">データ待機中...</div>
+                <div class="scroll-area">
+                    <div class="mini-list" id="mini-list">
+                        <div class="no-data">
+                            <div class="no-data-icon">📡</div>
+                            <div class="no-data-txt">データ待機中...</div>
+                        </div>
+                    </div>
+
+                    <div class="ad-wrap">
+                        <div class="ad-outer-container">
+                            <div class="ad-placeholder">
+                                <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
+                                <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
+                            </div>
+                            <div class="ad-content-area">
+                                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          <div class="ad-wrap">
-            <div class="ad-outer-container">
-              <div class="ad-placeholder">
-                <p>広告が表示されません。<br>開発を支援していただけませんか？</p>
-                <button class="btn-guide-open" onclick="openAdGuide()">[ 広告ブロックの解除方法 ]</button>
-              </div>
-              <div class="ad-content-area">
-                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
-              </div>
+            <div id="map"></div>
+
+            <div class="right">
+                <div class="right-hdr">
+                    <div class="right-hdr-title">地震リスト</div>
+                    <div class="live-badge">
+                        <div class="live-dot"></div>LIVE
+                    </div>
+                </div>
+                <div class="eq-list" id="eq-list">
+                    <div class="no-data">
+                        <div class="no-data-icon">🌐</div>
+                        <div class="no-data-txt">データを受信中...</div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-
-      <div id="map"></div>
-
-      <div class="right">
-        <div class="right-hdr">
-          <div class="right-hdr-title">地震リスト</div>
-          <div class="live-badge">
-            <div class="live-dot"></div>LIVE
-          </div>
-        </div>
-        <div class="eq-list" id="eq-list">
-          <div class="no-data">
-            <div class="no-data-icon">🌐</div>
-            <div class="no-data-txt">データを受信中...</div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <div id="eq-alert">
-    <div class="alrt-icon" id="alrt-icon">⚠️</div>
-    <div>
-      <div class="alrt-title" id="alrt-title">地震発生</div>
-      <div class="alrt-place" id="alrt-place">—</div>
-      <div class="alrt-detail" id="alrt-detail">—</div>
+    <div id="eq-alert">
+        <div class="alrt-icon" id="alrt-icon">⚠️</div>
+        <div>
+            <div class="alrt-title" id="alrt-title">地震発生</div>
+            <div class="alrt-place" id="alrt-place">—</div>
+            <div class="alrt-detail" id="alrt-detail">—</div>
+        </div>
+        <div class="alrt-bar-wrap">
+            <div class="alrt-bar" id="alrt-bar"></div>
+        </div>
     </div>
-    <div class="alrt-bar-wrap">
-      <div class="alrt-bar" id="alrt-bar"></div>
+
+    <div id="ad-guide-modal">
+        <div class="ad-modal-body">
+            <h3>広告ブロックの解除方法</h3>
+            <p>お使いのブロッカーのアイコンをクリックし、「このサイトでオフにする」を選択してください。解除後、ページを再読み込みすると広告が表示されます。</p>
+            <button class="ad-modal-reload" onclick="location.reload();">再読み込み</button>
+            <button class="ad-modal-close" onclick="closeAdGuide()">閉じる</button>
+        </div>
     </div>
-  </div>
 
-  <div id="ad-guide-modal">
-    <div class="ad-modal-body">
-      <h3>広告ブロックの解除方法</h3>
-      <p>お使いのブロッカーのアイコンをクリックし、「このサイトでオフにする」を選択してください。解除後、ページを再読み込みすると広告が表示されます。</p>
-      <button class="ad-modal-reload" onclick="location.reload();">再読み込み</button>
-      <button class="ad-modal-close" onclick="closeAdGuide()">閉じる</button>
-    </div>
-  </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        'use strict';
+        const WS_URL = 'wss://api.p2pquake.net/v2/ws';
+        const HIST_URL = 'https://api.p2pquake.net/v2/history?codes=551&limit=30';
+        const MAX_QUAKES = 100;
+        const ALERT_MAG = 4.0;
+        const TODAY = new Date().toDateString();
+        let areaGeoJson = null;
+        let currentAreaLayer = null;
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    'use strict';
-    const WS_URL = 'wss://api.p2pquake.net/v2/ws';
-    const HIST_URL = 'https://api.p2pquake.net/v2/history?codes=551&limit=30';
-    const MAX_QUAKES = 100;
-    const ALERT_MAG = 4.0;
-    const TODAY = new Date().toDateString();
-    let areaGeoJson = null;
-    let currentAreaLayer = null;
+        const UPDATE_LOGS = [
+            {
+                id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
+                title: 'マップ・表示品質アップデート',
+                desc: '以下の修正・改善を行いました。\n\n'
+                    + '・発生時刻が「Invalid Date」と表示されるバグを修正\n'
+                    + '・マップ背景を完全な黒に変更\n'
+                    + '・地図に周辺国（韓国・中国・ロシア等）を表示\n'
+                    + '・震度分布を都道府県内の細分区域（浜通り・北部・南部等）レベルで表示\n'
+                    + '・サイドバーに広告エリアを追加（広告ブロック対応メッセージ付き）'
+            },
+            {
+                id: 'v1.1.0', version: 'v1.1.0', date: '2026-04-24',
+                title: 'マップ・UX大幅アップデート',
+                desc: '以下の機能を追加・改善しました！\n\n'
+                    + '・地震発生時に震源へ自動追尾し、P波（赤）・S波（橙）の広がりをアニメーション表示\n'
+                    + '・震源マーカーを×印に変更（最新1件 / 選択中のみ表示）\n'
+                    + '・地震リストにホバーアローインジケーターを追加\n'
+                    + '・リスト選択時に左パネルへ震源地・M・震度・深さ・時刻を詳細表示\n'
+                    + '・リスト選択時にマップへ都道府県ごとの震度分布を表示\n'
+                    + '・マップを地域区分スタイルに変更、主要都市ドットを追加'
+            },
+            {
+                id: 'v1.0.1', version: 'v1.0.1', date: '2026-04-23',
+                title: '地図の修正',
+                desc: '地図が正しく表示されない問題を修正しました'
+            },
+            {
+                id: 'v1.0.0', version: 'v1.0.0', date: '2026-04-23',
+                title: 'SEISMO 初回リリース',
+                desc: 'リアルタイム地震モニター「SEISMO」をリリースしました！\n\n'
+                    + '・P2P地震情報WebSocketによるリアルタイムデータ受信\n'
+                    + '・日本地図上へのリアルタイム震源マーカー表示\n'
+                    + '・マグニチュード・震度によるフィルタリング機能\n'
+                    + '・地震履歴リスト（最新100件）\n'
+                    + '・M4以上 / 震度4以上の自動アラート通知\n'
+                    + '・本日の統計情報リアルタイム集計\n'
+                    + '・緊急地震速報（EEW）受信時の画面点滅アラート\n'
+                    + '・ヘッダーリアルタイム波形グラフ'
+            }
+        ];
 
-    const UPDATE_LOGS = [
-      {
-        id: 'v1.1.2-pre', version: 'v1.1.2-pre', date: '2026-04-27',
-        title: '震度分布マップの視認性向上アップデート',
-        desc: '以下の修正・改善を行いました。\n\n'
-          + '・震度分布の表示方式をポイント（点）から細分区域（面）での塗りつぶしに変更\n'
-          + '・震度観測地点が密集している地域でのマーカーの重なりを解消\n'
-          + '・気象庁の細分区域（宮城県北部、中通りなど）に基づいた鮮やかな色分けを実装\n'
-          + '・震源地（×マーク）を最前面に表示し、どこが震源かより明確に判別可能に'
-      },
-      {
-        id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
-        title: 'マップ・表示品質アップデート',
-        desc: '以下の修正・改善を行いました。\n\n'
-          + '・発生時刻が「Invalid Date」と表示されるバグを修正\n'
-          + '・マップ背景を完全な黒に変更\n'
-          + '・地図に周辺国（韓国・中国・ロシア等）を表示\n'
-          + '・震度分布を都道府県内の細分区域（浜通り・北部・南部等）レベルで表示\n'
-          + '・サイドバーに広告エリアを追加（広告ブロック対応メッセージ付き）'
-      },
-      {
-        id: 'v1.1.0', version: 'v1.1.0', date: '2026-04-24',
-        title: 'マップ・UX大幅アップデート',
-        desc: '以下の機能を追加・改善しました！\n\n'
-          + '・地震発生時に震源へ自動追尾し、P波（赤）・S波（橙）の広がりをアニメーション表示\n'
-          + '・震源マーカーを×印に変更（最新1件 / 選択中のみ表示）\n'
-          + '・地震リストにホバーアローインジケーターを追加\n'
-          + '・リスト選択時に左パネルへ震源地・M・震度・深さ・時刻を詳細表示\n'
-          + '・リスト選択時にマップへ都道府県ごとの震度分布を表示\n'
-          + '・マップを地域区分スタイルに変更、主要都市ドットを追加'
-      },
-      {
-        id: 'v1.0.1', version: 'v1.0.1', date: '2026-04-23',
-        title: '地図の修正',
-        desc: '地図が正しく表示されない問題を修正しました'
-      },
-      {
-        id: 'v1.0.0', version: 'v1.0.0', date: '2026-04-23',
-        title: 'SEISMO 初回リリース',
-        desc: 'リアルタイム地震モニター「SEISMO」をリリースしました！\n\n'
-          + '・P2P地震情報WebSocketによるリアルタイムデータ受信\n'
-          + '・日本地図上へのリアルタイム震源マーカー表示\n'
-          + '・マグニチュード・震度によるフィルタリング機能\n'
-          + '・地震履歴リスト（最新100件）\n'
-          + '・M4以上 / 震度4以上の自動アラート通知\n'
-          + '・本日の統計情報リアルタイム集計\n'
-          + '・緊急地震速報（EEW）受信時の画面点滅アラート\n'
-          + '・ヘッダーリアルタイム波形グラフ'
-      }
-    ];
+        const REGION_CENTERS = {
+            '北海道道北': [44.8, 142.4], '北海道道東': [43.8, 144.5], '北海道道央': [43.1, 141.4], '北海道道南': [41.9, 140.7],
+            '北海道石狩': [43.2, 141.4], '北海道後志': [43.0, 140.7], '北海道空知': [43.5, 141.9], '北海道上川': [43.8, 142.6],
+            '北海道留萌': [44.0, 141.8], '北海道宗谷': [45.3, 141.9], '北海道網走': [44.0, 144.3], '北海道十勝': [43.0, 143.2],
+            '北海道釧路': [43.0, 144.4], '北海道根室': [43.3, 145.6], '北海道胆振': [42.7, 141.3], '北海道日高': [42.4, 142.4],
+            '北海道渡島': [41.8, 140.7], '北海道檜山': [42.1, 140.0],
+            '青森県津軽': [40.7, 140.3], '青森県下北': [41.4, 141.1], '青森県三八上北': [40.4, 141.3],
+            '岩手県内陸北部': [39.8, 141.1], '岩手県内陸南部': [39.3, 141.1], '岩手県沿岸北部': [39.9, 141.8], '岩手県沿岸南部': [39.0, 141.7],
+            '宮城県北部': [38.7, 141.0], '宮城県南部': [38.1, 140.9], '宮城県中部': [38.4, 141.0],
+            '秋田県北部': [40.2, 140.4], '秋田県南部': [39.2, 140.6], '秋田県沿岸': [39.7, 140.1],
+            '山形県北部': [38.8, 140.1], '山形県中部': [38.4, 140.2], '山形県南部': [37.9, 140.1], '山形県庄内': [38.9, 139.8],
+            '福島県浜通り': [37.1, 141.0], '福島県中通り': [37.4, 140.4], '福島県会津': [37.4, 139.8],
+            '茨城県北部': [36.7, 140.7], '茨城県南部': [36.1, 140.1],
+            '栃木県北部': [37.0, 139.9], '栃木県南部': [36.3, 139.7],
+            '群馬県北部': [36.8, 138.9], '群馬県南部': [36.3, 139.1],
+            '埼玉県北部': [36.1, 139.5], '埼玉県南部': [35.8, 139.6],
+            '千葉県北西部': [35.7, 140.0], '千葉県北東部': [35.8, 140.6], '千葉県南部': [35.1, 140.1],
+            '東京都23区': [35.7, 139.7], '東京都多摩東部': [35.6, 139.4], '東京都多摩西部': [35.6, 139.1], '東京都伊豆諸島': [34.0, 139.4],
+            '神奈川県東部': [35.5, 139.6], '神奈川県西部': [35.4, 139.1],
+            '新潟県上越': [37.1, 138.2], '新潟県中越': [37.4, 138.8], '新潟県下越': [37.9, 139.1], '新潟県佐渡': [38.0, 138.4],
+            '富山県東部': [36.7, 137.5], '富山県西部': [36.7, 136.9],
+            '石川県能登': [37.1, 136.9], '石川県加賀': [36.4, 136.5],
+            '福井県嶺北': [36.1, 136.2], '福井県嶺南': [35.6, 135.9],
+            '山梨県東部・富士五湖': [35.5, 138.8], '山梨県中・西部': [35.6, 138.4],
+            '長野県北部': [36.9, 138.2], '長野県中部': [36.2, 138.0], '長野県南部': [35.8, 137.8], '長野県東部・北部': [36.4, 138.4],
+            '岐阜県北部': [36.2, 137.1], '岐阜県南部': [35.5, 136.8],
+            '静岡県伊豆': [34.9, 138.9], '静岡県東部': [35.1, 138.7], '静岡県中部': [34.9, 138.4], '静岡県西部': [34.9, 137.8],
+            '愛知県西部': [35.2, 136.8], '愛知県東部': [35.0, 137.2],
+            '三重県北部': [35.0, 136.5], '三重県中部': [34.4, 136.3], '三重県南部': [33.8, 136.1],
+            '滋賀県北部': [35.5, 136.1], '滋賀県南部': [34.9, 135.9],
+            '京都府北部': [35.5, 135.4], '京都府南部': [34.9, 135.8],
+            '大阪府北部': [34.9, 135.6], '大阪府南部': [34.4, 135.4],
+            '兵庫県北部': [35.4, 134.8], '兵庫県南部': [34.7, 135.2], '兵庫県淡路島': [34.4, 134.9],
+            '奈良県北部': [34.7, 135.8], '奈良県南部': [34.2, 135.9],
+            '和歌山県北部': [34.3, 135.4], '和歌山県南部': [33.8, 135.5],
+            '鳥取県東部': [35.5, 134.2], '鳥取県中部': [35.5, 133.7], '鳥取県西部': [35.4, 133.3],
+            '島根県東部': [35.4, 133.1], '島根県西部': [34.9, 132.0], '島根県隠岐': [36.1, 133.1],
+            '岡山県北部': [35.1, 133.9], '岡山県南部': [34.7, 134.0],
+            '広島県北部': [34.8, 133.0], '広島県南部': [34.3, 132.5],
+            '山口県北部': [34.4, 131.5], '山口県南部': [34.0, 131.5], '山口県東部': [34.1, 131.9], '山口県西部': [33.9, 130.9],
+            '徳島県北部': [34.2, 134.4], '徳島県南部': [33.7, 134.2],
+            '香川県東部': [34.4, 134.3], '香川県西部': [34.2, 133.5],
+            '愛媛県東部': [34.1, 132.9], '愛媛県中予': [33.8, 132.8], '愛媛県西部': [33.5, 132.4],
+            '高知県東部': [33.7, 134.2], '高知県中部': [33.5, 133.5], '高知県西部': [33.2, 132.8],
+            '福岡県北西部': [33.7, 130.4], '福岡県南部': [33.4, 130.7], '福岡県北九州': [33.9, 130.9],
+            '佐賀県北部': [33.5, 130.0], '佐賀県南部': [33.1, 130.3],
+            '長崎県北部': [33.4, 129.7], '長崎県南部': [32.7, 129.9], '長崎県壱岐・対馬': [34.3, 129.3], '長崎県五島': [32.7, 128.8],
+            '熊本県阿蘇': [32.9, 131.1], '熊本県球磨': [32.2, 130.8], '熊本県上益城': [32.7, 130.8], '熊本県天草・芦北': [32.3, 130.2], '熊本県熊本': [32.8, 130.7],
+            '大分県北部': [33.6, 131.4], '大分県南部': [32.9, 131.5], '大分県西部': [33.2, 131.0],
+            '宮崎県北部': [32.5, 131.7], '宮崎県南部': [31.7, 131.1], '宮崎県西部': [32.1, 131.1],
+            '鹿児島県薩摩': [31.6, 130.3], '鹿児島県大隅': [31.4, 130.9], '鹿児島県種子島・屋久島': [30.4, 130.6], '鹿児島県奄美群島': [28.4, 129.5], '鹿児島県トカラ列島': [29.8, 129.6],
+            '沖縄県本島地方': [26.3, 127.8], '沖縄県宮古島地方': [24.8, 125.3], '沖縄県八重山地方': [24.4, 124.2], '沖縄県大東島地方': [25.8, 131.2],
+        };
 
-    const REGION_CENTERS = {
-      '北海道道北': [44.8, 142.4], '北海道道東': [43.8, 144.5], '北海道道央': [43.1, 141.4], '北海道道南': [41.9, 140.7],
-      '北海道石狩': [43.2, 141.4], '北海道後志': [43.0, 140.7], '北海道空知': [43.5, 141.9], '北海道上川': [43.8, 142.6],
-      '北海道留萌': [44.0, 141.8], '北海道宗谷': [45.3, 141.9], '北海道網走': [44.0, 144.3], '北海道十勝': [43.0, 143.2],
-      '北海道釧路': [43.0, 144.4], '北海道根室': [43.3, 145.6], '北海道胆振': [42.7, 141.3], '北海道日高': [42.4, 142.4],
-      '北海道渡島': [41.8, 140.7], '北海道檜山': [42.1, 140.0],
-      '青森県津軽': [40.7, 140.3], '青森県下北': [41.4, 141.1], '青森県三八上北': [40.4, 141.3],
-      '岩手県内陸北部': [39.8, 141.1], '岩手県内陸南部': [39.3, 141.1], '岩手県沿岸北部': [39.9, 141.8], '岩手県沿岸南部': [39.0, 141.7],
-      '宮城県北部': [38.7, 141.0], '宮城県南部': [38.1, 140.9], '宮城県中部': [38.4, 141.0],
-      '秋田県北部': [40.2, 140.4], '秋田県南部': [39.2, 140.6], '秋田県沿岸': [39.7, 140.1],
-      '山形県北部': [38.8, 140.1], '山形県中部': [38.4, 140.2], '山形県南部': [37.9, 140.1], '山形県庄内': [38.9, 139.8],
-      '福島県浜通り': [37.1, 141.0], '福島県中通り': [37.4, 140.4], '福島県会津': [37.4, 139.8],
-      '茨城県北部': [36.7, 140.7], '茨城県南部': [36.1, 140.1],
-      '栃木県北部': [37.0, 139.9], '栃木県南部': [36.3, 139.7],
-      '群馬県北部': [36.8, 138.9], '群馬県南部': [36.3, 139.1],
-      '埼玉県北部': [36.1, 139.5], '埼玉県南部': [35.8, 139.6],
-      '千葉県北西部': [35.7, 140.0], '千葉県北東部': [35.8, 140.6], '千葉県南部': [35.1, 140.1],
-      '東京都23区': [35.7, 139.7], '東京都多摩東部': [35.6, 139.4], '東京都多摩西部': [35.6, 139.1], '東京都伊豆諸島': [34.0, 139.4],
-      '神奈川県東部': [35.5, 139.6], '神奈川県西部': [35.4, 139.1],
-      '新潟県上越': [37.1, 138.2], '新潟県中越': [37.4, 138.8], '新潟県下越': [37.9, 139.1], '新潟県佐渡': [38.0, 138.4],
-      '富山県東部': [36.7, 137.5], '富山県西部': [36.7, 136.9],
-      '石川県能登': [37.1, 136.9], '石川県加賀': [36.4, 136.5],
-      '福井県嶺北': [36.1, 136.2], '福井県嶺南': [35.6, 135.9],
-      '山梨県東部・富士五湖': [35.5, 138.8], '山梨県中・西部': [35.6, 138.4],
-      '長野県北部': [36.9, 138.2], '長野県中部': [36.2, 138.0], '長野県南部': [35.8, 137.8], '長野県東部・北部': [36.4, 138.4],
-      '岐阜県北部': [36.2, 137.1], '岐阜県南部': [35.5, 136.8],
-      '静岡県伊豆': [34.9, 138.9], '静岡県東部': [35.1, 138.7], '静岡県中部': [34.9, 138.4], '静岡県西部': [34.9, 137.8],
-      '愛知県西部': [35.2, 136.8], '愛知県東部': [35.0, 137.2],
-      '三重県北部': [35.0, 136.5], '三重県中部': [34.4, 136.3], '三重県南部': [33.8, 136.1],
-      '滋賀県北部': [35.5, 136.1], '滋賀県南部': [34.9, 135.9],
-      '京都府北部': [35.5, 135.4], '京都府南部': [34.9, 135.8],
-      '大阪府北部': [34.9, 135.6], '大阪府南部': [34.4, 135.4],
-      '兵庫県北部': [35.4, 134.8], '兵庫県南部': [34.7, 135.2], '兵庫県淡路島': [34.4, 134.9],
-      '奈良県北部': [34.7, 135.8], '奈良県南部': [34.2, 135.9],
-      '和歌山県北部': [34.3, 135.4], '和歌山県南部': [33.8, 135.5],
-      '鳥取県東部': [35.5, 134.2], '鳥取県中部': [35.5, 133.7], '鳥取県西部': [35.4, 133.3],
-      '島根県東部': [35.4, 133.1], '島根県西部': [34.9, 132.0], '島根県隠岐': [36.1, 133.1],
-      '岡山県北部': [35.1, 133.9], '岡山県南部': [34.7, 134.0],
-      '広島県北部': [34.8, 133.0], '広島県南部': [34.3, 132.5],
-      '山口県北部': [34.4, 131.5], '山口県南部': [34.0, 131.5], '山口県東部': [34.1, 131.9], '山口県西部': [33.9, 130.9],
-      '徳島県北部': [34.2, 134.4], '徳島県南部': [33.7, 134.2],
-      '香川県東部': [34.4, 134.3], '香川県西部': [34.2, 133.5],
-      '愛媛県東部': [34.1, 132.9], '愛媛県中予': [33.8, 132.8], '愛媛県西部': [33.5, 132.4],
-      '高知県東部': [33.7, 134.2], '高知県中部': [33.5, 133.5], '高知県西部': [33.2, 132.8],
-      '福岡県北西部': [33.7, 130.4], '福岡県南部': [33.4, 130.7], '福岡県北九州': [33.9, 130.9],
-      '佐賀県北部': [33.5, 130.0], '佐賀県南部': [33.1, 130.3],
-      '長崎県北部': [33.4, 129.7], '長崎県南部': [32.7, 129.9], '長崎県壱岐・対馬': [34.3, 129.3], '長崎県五島': [32.7, 128.8],
-      '熊本県阿蘇': [32.9, 131.1], '熊本県球磨': [32.2, 130.8], '熊本県上益城': [32.7, 130.8], '熊本県天草・芦北': [32.3, 130.2], '熊本県熊本': [32.8, 130.7],
-      '大分県北部': [33.6, 131.4], '大分県南部': [32.9, 131.5], '大分県西部': [33.2, 131.0],
-      '宮崎県北部': [32.5, 131.7], '宮崎県南部': [31.7, 131.1], '宮崎県西部': [32.1, 131.1],
-      '鹿児島県薩摩': [31.6, 130.3], '鹿児島県大隅': [31.4, 130.9], '鹿児島県種子島・屋久島': [30.4, 130.6], '鹿児島県奄美群島': [28.4, 129.5], '鹿児島県トカラ列島': [29.8, 129.6],
-      '沖縄県本島地方': [26.3, 127.8], '沖縄県宮古島地方': [24.8, 125.3], '沖縄県八重山地方': [24.4, 124.2], '沖縄県大東島地方': [25.8, 131.2],
-    };
+        const PREF_CENTERS = {
+            '北海道': [43.064, 141.347], '青森県': [40.824, 140.741], '岩手県': [39.704, 141.153],
+            '宮城県': [38.269, 140.872], '秋田県': [39.718, 140.102], '山形県': [38.241, 140.364],
+            '福島県': [37.750, 140.468], '茨城県': [36.341, 140.447], '栃木県': [36.566, 139.883],
+            '群馬県': [36.391, 139.060], '埼玉県': [35.857, 139.649], '千葉県': [35.605, 140.123],
+            '東京都': [35.690, 139.692], '神奈川県': [35.448, 139.643], '新潟県': [37.902, 139.023],
+            '富山県': [36.695, 137.211], '石川県': [36.594, 136.626], '福井県': [36.065, 136.221],
+            '山梨県': [35.664, 138.568], '長野県': [36.651, 138.181], '岐阜県': [35.391, 136.722],
+            '静岡県': [34.977, 138.383], '愛知県': [35.180, 136.907], '三重県': [34.730, 136.509],
+            '滋賀県': [35.004, 135.869], '京都府': [35.021, 135.755], '大阪府': [34.686, 135.520],
+            '兵庫県': [34.691, 135.183], '奈良県': [34.685, 135.833], '和歌山県': [34.226, 135.168],
+            '鳥取県': [35.504, 134.238], '島根県': [35.472, 133.051], '岡山県': [34.662, 133.935],
+            '広島県': [34.396, 132.459], '山口県': [34.186, 131.471], '徳島県': [34.066, 134.560],
+            '香川県': [34.340, 134.043], '愛媛県': [33.842, 132.766], '高知県': [33.560, 133.531],
+            '福岡県': [33.607, 130.418], '佐賀県': [33.249, 130.299], '長崎県': [32.745, 129.874],
+            '熊本県': [32.790, 130.742], '大分県': [33.238, 131.613], '宮崎県': [31.911, 131.424],
+            '鹿児島県': [31.560, 130.558], '沖縄県': [26.212, 127.681],
+        };
 
-    const PREF_CENTERS = {
-      '北海道': [43.064, 141.347], '青森県': [40.824, 140.741], '岩手県': [39.704, 141.153],
-      '宮城県': [38.269, 140.872], '秋田県': [39.718, 140.102], '山形県': [38.241, 140.364],
-      '福島県': [37.750, 140.468], '茨城県': [36.341, 140.447], '栃木県': [36.566, 139.883],
-      '群馬県': [36.391, 139.060], '埼玉県': [35.857, 139.649], '千葉県': [35.605, 140.123],
-      '東京都': [35.690, 139.692], '神奈川県': [35.448, 139.643], '新潟県': [37.902, 139.023],
-      '富山県': [36.695, 137.211], '石川県': [36.594, 136.626], '福井県': [36.065, 136.221],
-      '山梨県': [35.664, 138.568], '長野県': [36.651, 138.181], '岐阜県': [35.391, 136.722],
-      '静岡県': [34.977, 138.383], '愛知県': [35.180, 136.907], '三重県': [34.730, 136.509],
-      '滋賀県': [35.004, 135.869], '京都府': [35.021, 135.755], '大阪府': [34.686, 135.520],
-      '兵庫県': [34.691, 135.183], '奈良県': [34.685, 135.833], '和歌山県': [34.226, 135.168],
-      '鳥取県': [35.504, 134.238], '島根県': [35.472, 133.051], '岡山県': [34.662, 133.935],
-      '広島県': [34.396, 132.459], '山口県': [34.186, 131.471], '徳島県': [34.066, 134.560],
-      '香川県': [34.340, 134.043], '愛媛県': [33.842, 132.766], '高知県': [33.560, 133.531],
-      '福岡県': [33.607, 130.418], '佐賀県': [33.249, 130.299], '長崎県': [32.745, 129.874],
-      '熊本県': [32.790, 130.742], '大分県': [33.238, 131.613], '宮崎県': [31.911, 131.424],
-      '鹿児島県': [31.560, 130.558], '沖縄県': [26.212, 127.681],
-    };
+        const MAJOR_CITIES = [
+            { n: '東京', lat: 35.690, lng: 139.692 }, { n: '横浜', lat: 35.444, lng: 139.638 },
+            { n: '大阪', lat: 34.686, lng: 135.520 }, { n: '名古屋', lat: 35.181, lng: 136.907 },
+            { n: '札幌', lat: 43.062, lng: 141.354 }, { n: '福岡', lat: 33.590, lng: 130.402 },
+            { n: '仙台', lat: 38.268, lng: 140.869 }, { n: '広島', lat: 34.385, lng: 132.455 },
+            { n: '京都', lat: 35.011, lng: 135.768 }, { n: '神戸', lat: 34.690, lng: 135.195 },
+            { n: '那覇', lat: 26.212, lng: 127.681 }, { n: '新潟', lat: 37.916, lng: 139.036 },
+            { n: '金沢', lat: 36.561, lng: 136.656 }, { n: '盛岡', lat: 39.703, lng: 141.153 },
+            { n: '青森', lat: 40.824, lng: 140.741 }, { n: '鹿児島', lat: 31.560, lng: 130.558 },
+            { n: 'Seoul', lat: 37.566, lng: 126.978 }, { n: 'Beijing', lat: 39.909, lng: 116.397 },
+            { n: 'Shanghai', lat: 31.228, lng: 121.474 }, { n: 'Taipei', lat: 25.033, lng: 121.565 },
+        ];
 
-    const MAJOR_CITIES = [
-      { n: '東京', lat: 35.690, lng: 139.692 }, { n: '横浜', lat: 35.444, lng: 139.638 },
-      { n: '大阪', lat: 34.686, lng: 135.520 }, { n: '名古屋', lat: 35.181, lng: 136.907 },
-      { n: '札幌', lat: 43.062, lng: 141.354 }, { n: '福岡', lat: 33.590, lng: 130.402 },
-      { n: '仙台', lat: 38.268, lng: 140.869 }, { n: '広島', lat: 34.385, lng: 132.455 },
-      { n: '京都', lat: 35.011, lng: 135.768 }, { n: '神戸', lat: 34.690, lng: 135.195 },
-      { n: '那覇', lat: 26.212, lng: 127.681 }, { n: '新潟', lat: 37.916, lng: 139.036 },
-      { n: '金沢', lat: 36.561, lng: 136.656 }, { n: '盛岡', lat: 39.703, lng: 141.153 },
-      { n: '青森', lat: 40.824, lng: 140.741 }, { n: '鹿児島', lat: 31.560, lng: 130.558 },
-      { n: 'Seoul', lat: 37.566, lng: 126.978 }, { n: 'Beijing', lat: 39.909, lng: 116.397 },
-      { n: 'Shanghai', lat: 31.228, lng: 121.474 }, { n: 'Taipei', lat: 25.033, lng: 121.565 },
-    ];
+        const S = {
+            quakes: [], filterMag: 1.0, filterInt: -1, selectedId: null,
+            stats: { count: 0, maxMag: 0, maxMagPlace: '', maxScale: -1, maxIntLbl: '—', total: 0 },
+            map: null, markers: new Map(), hdrSpikes: [], alertTimer: null, wsRetryDelay: 2000,
+            prefLayer: null, intensityMarkers: [], cityMarkerList: [],
+            pWave: null, sWave: null, waveTimer: null,
+        };
 
-    const S = {
-      quakes: [], filterMag: 1.0, filterInt: -1, selectedId: null,
-      stats: { count: 0, maxMag: 0, maxMagPlace: '', maxScale: -1, maxIntLbl: '—', total: 0 },
-      map: null, markers: new Map(), hdrSpikes: [], alertTimer: null, wsRetryDelay: 2000,
-      prefLayer: null, intensityMarkers: [], cityMarkerList: [],
-      pWave: null, sWave: null, waveTimer: null,
-    };
+        const INT = {
+            10: { lbl: '1', cls: 'i1', color: '#9ec5fe' }, 20: { lbl: '2', cls: 'i2', color: '#60a5fa' },
+            30: { lbl: '3', cls: 'i3', color: '#4ade80' }, 40: { lbl: '4', cls: 'i4', color: '#facc15' },
+            45: { lbl: '5弱', cls: 'i5m', color: '#fb923c' }, 50: { lbl: '5強', cls: 'i5p', color: '#f97316' },
+            55: { lbl: '6弱', cls: 'i6m', color: '#ef4444' }, 60: { lbl: '6強', cls: 'i6p', color: '#dc2626' },
+            70: { lbl: '7', cls: 'i7', color: '#cc44ff' },
+        };
+        const intInfo = s => INT[s] || { lbl: '不明', cls: 'iunk', color: '#2e3d52' };
+        const magCls = m => m < 3 ? 'm-lo' : m < 4 ? 'm-md' : m < 5 ? 'm-hi' : m < 6 ? 'm-mj' : 'm-cr';
+        const magColor = m => m < 3 ? '#4ade80' : m < 4 ? '#facc15' : m < 5 ? '#fb923c' : m < 6 ? '#ef4444' : '#cc44ff';
+        const magSize = m => m < 2 ? 9 : m < 3 ? 12 : m < 4 ? 16 : m < 5 ? 22 : m < 6 ? 28 : m < 7 ? 36 : 46;
+        const esc = s => { const d = document.createElement('div'); d.appendChild(document.createTextNode(String(s))); return d.innerHTML; };
 
-    const INT = {
-      10: { lbl: '1', cls: 'i1', color: '#9ec5fe' }, 20: { lbl: '2', cls: 'i2', color: '#60a5fa' },
-      30: { lbl: '3', cls: 'i3', color: '#4ade80' }, 40: { lbl: '4', cls: 'i4', color: '#facc15' },
-      45: { lbl: '5弱', cls: 'i5m', color: '#fb923c' }, 50: { lbl: '5強', cls: 'i5p', color: '#f97316' },
-      55: { lbl: '6弱', cls: 'i6m', color: '#ef4444' }, 60: { lbl: '6強', cls: 'i6p', color: '#dc2626' },
-      70: { lbl: '7', cls: 'i7', color: '#cc44ff' },
-    };
-    const intInfo = s => INT[s] || { lbl: '不明', cls: 'iunk', color: '#2e3d52' };
-    const magCls = m => m < 3 ? 'm-lo' : m < 4 ? 'm-md' : m < 5 ? 'm-hi' : m < 6 ? 'm-mj' : 'm-cr';
-    const magColor = m => m < 3 ? '#4ade80' : m < 4 ? '#facc15' : m < 5 ? '#fb923c' : m < 6 ? '#ef4444' : '#cc44ff';
-    const magSize = m => m < 2 ? 9 : m < 3 ? 12 : m < 4 ? 16 : m < 5 ? 22 : m < 6 ? 28 : m < 7 ? 36 : 46;
-    const esc = s => { const d = document.createElement('div'); d.appendChild(document.createTextNode(String(s))); return d.innerHTML; };
+        function parseEqDate(s) {
+            if (!s || typeof s !== 'string') return new Date(NaN);
+            return new Date(s.replace(/\//g, '-').replace(' ', 'T'));
+        }
 
-    function parseEqDate(s) {
-      if (!s || typeof s !== 'string') return new Date(NaN);
-      return new Date(s.replace(/\//g, '-').replace(' ', 'T'));
-    }
+        function fmtTime(s) {
+            const d = parseEqDate(s), now = new Date(), diff = now - d;
+            if (isNaN(d)) return '不明';
+            if (diff < 60000) return `${Math.floor(diff / 1000)}秒前`;
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}分前`;
+            return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+        function fmtDateTime(s) {
+            const d = parseEqDate(s);
+            if (isNaN(d)) return '不明';
+            return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
 
-    function fmtTime(s) {
-      const d = parseEqDate(s), now = new Date(), diff = now - d;
-      if (isNaN(d)) return '不明';
-      if (diff < 60000) return `${Math.floor(diff / 1000)}秒前`;
-      if (diff < 3600000) return `${Math.floor(diff / 60000)}分前`;
-      return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    }
-    function fmtDateTime(s) {
-      const d = parseEqDate(s);
-      if (isNaN(d)) return '不明';
-      return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
+        let ldAnimId;
+        function startLoadingAnim() {
+            const cv = document.getElementById('ld-canvas'), ctx = cv.getContext('2d');
+            const W = cv.width, H = cv.height, MID = H / 2;
+            let t = 0;
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+                ctx.strokeStyle = 'rgba(255,45,62,0.06)'; ctx.lineWidth = 1;
+                for (let y = 8; y < H; y += 8) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+                ctx.strokeStyle = 'rgba(255,45,62,0.15)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke();
+                ctx.strokeStyle = '#ff2d3e'; ctx.lineWidth = 1.5; ctx.shadowBlur = 10; ctx.shadowColor = '#ff2d3e';
+                ctx.beginPath();
+                for (let x = 0; x < W; x++) { const v = Math.sin((x + t) * 0.045) * 4 + Math.sin((x + t) * 0.13) * 2.5 + (Math.random() - .5) * 1.5; x === 0 ? ctx.moveTo(x, MID - v) : ctx.lineTo(x, MID - v); }
+                ctx.stroke(); ctx.shadowBlur = 0;
+                const cx = (t * 2) % W, cv2 = Math.sin((cx + t) * 0.045) * 4 + Math.sin((cx + t) * 0.13) * 2.5;
+                ctx.fillStyle = '#ff2d3e'; ctx.shadowBlur = 14; ctx.shadowColor = '#ff2d3e';
+                ctx.beginPath(); ctx.arc(cx, MID - cv2, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                t += 1.8;
+                ldAnimId = requestAnimationFrame(draw);
+            }
+            draw();
+        }
 
-    let ldAnimId;
-    function startLoadingAnim() {
-      const cv = document.getElementById('ld-canvas'), ctx = cv.getContext('2d');
-      const W = cv.width, H = cv.height, MID = H / 2;
-      let t = 0;
-      function draw() {
-        ctx.clearRect(0, 0, W, H);
-        ctx.strokeStyle = 'rgba(255,45,62,0.06)'; ctx.lineWidth = 1;
-        for (let y = 8; y < H; y += 8) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-        ctx.strokeStyle = 'rgba(255,45,62,0.15)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke();
-        ctx.strokeStyle = '#ff2d3e'; ctx.lineWidth = 1.5; ctx.shadowBlur = 10; ctx.shadowColor = '#ff2d3e';
-        ctx.beginPath();
-        for (let x = 0; x < W; x++) { const v = Math.sin((x + t) * 0.045) * 4 + Math.sin((x + t) * 0.13) * 2.5 + (Math.random() - .5) * 1.5; x === 0 ? ctx.moveTo(x, MID - v) : ctx.lineTo(x, MID - v); }
-        ctx.stroke(); ctx.shadowBlur = 0;
-        const cx = (t * 2) % W, cv2 = Math.sin((cx + t) * 0.045) * 4 + Math.sin((cx + t) * 0.13) * 2.5;
-        ctx.fillStyle = '#ff2d3e'; ctx.shadowBlur = 14; ctx.shadowColor = '#ff2d3e';
-        ctx.beginPath(); ctx.arc(cx, MID - cv2, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        t += 1.8;
-        ldAnimId = requestAnimationFrame(draw);
-      }
-      draw();
-    }
+        let hdrAnimId;
+        function startHdrAnim() {
+            const cv = document.getElementById('hdr-canvas'); if (!cv) return;
+            const ctx = cv.getContext('2d');
+            const resize = () => { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; };
+            resize(); new ResizeObserver(resize).observe(cv);
+            const data = []; let t = 0;
+            function draw() {
+                const W = cv.width, H = cv.height, MID = H / 2;
+                if (!W || !H) { hdrAnimId = requestAnimationFrame(draw); return; }
+                ctx.clearRect(0, 0, W, H);
+                ctx.strokeStyle = 'rgba(0,216,255,0.04)'; ctx.lineWidth = 1;
+                for (let y = 0; y < H; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+                ctx.strokeStyle = 'rgba(0,216,255,0.1)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke();
+                let spike = 0;
+                S.hdrSpikes = S.hdrSpikes.filter(s => s.life > 0);
+                S.hdrSpikes.forEach(s => { spike += s.amp * Math.exp(-s.dec * (s.total - s.life)) * Math.sin(s.life * s.freq); s.life--; });
+                const base = Math.sin(t * 0.07) * 1.8 + Math.sin(t * 0.18) * 1 + (Math.random() - .5) * 1.5;
+                data.push(base + spike); if (data.length > W) data.shift();
+                const grad = ctx.createLinearGradient(0, 0, 0, H);
+                grad.addColorStop(0, 'rgba(0,216,255,0)'); grad.addColorStop(0.5, 'rgba(0,216,255,0.75)'); grad.addColorStop(1, 'rgba(0,216,255,0)');
+                ctx.strokeStyle = grad; ctx.lineWidth = 1.5; ctx.shadowBlur = 5; ctx.shadowColor = '#00d8ff';
+                ctx.beginPath();
+                const scale = (H / 2 - 5);
+                for (let x = 0; x < data.length; x++) { const y = MID - Math.max(-1, Math.min(1, data[x] / 7)) * scale; x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+                ctx.stroke(); ctx.shadowBlur = 0; t++;
+                hdrAnimId = requestAnimationFrame(draw);
+            }
+            draw();
+        }
 
-    let hdrAnimId;
-    function startHdrAnim() {
-      const cv = document.getElementById('hdr-canvas'); if (!cv) return;
-      const ctx = cv.getContext('2d');
-      const resize = () => { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; };
-      resize(); new ResizeObserver(resize).observe(cv);
-      const data = []; let t = 0;
-      function draw() {
-        const W = cv.width, H = cv.height, MID = H / 2;
-        if (!W || !H) { hdrAnimId = requestAnimationFrame(draw); return; }
-        ctx.clearRect(0, 0, W, H);
-        ctx.strokeStyle = 'rgba(0,216,255,0.04)'; ctx.lineWidth = 1;
-        for (let y = 0; y < H; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-        ctx.strokeStyle = 'rgba(0,216,255,0.1)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke();
-        let spike = 0;
-        S.hdrSpikes = S.hdrSpikes.filter(s => s.life > 0);
-        S.hdrSpikes.forEach(s => { spike += s.amp * Math.exp(-s.dec * (s.total - s.life)) * Math.sin(s.life * s.freq); s.life--; });
-        const base = Math.sin(t * 0.07) * 1.8 + Math.sin(t * 0.18) * 1 + (Math.random() - .5) * 1.5;
-        data.push(base + spike); if (data.length > W) data.shift();
-        const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, 'rgba(0,216,255,0)'); grad.addColorStop(0.5, 'rgba(0,216,255,0.75)'); grad.addColorStop(1, 'rgba(0,216,255,0)');
-        ctx.strokeStyle = grad; ctx.lineWidth = 1.5; ctx.shadowBlur = 5; ctx.shadowColor = '#00d8ff';
-        ctx.beginPath();
-        const scale = (H / 2 - 5);
-        for (let x = 0; x < data.length; x++) { const y = MID - Math.max(-1, Math.min(1, data[x] / 7)) * scale; x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-        ctx.stroke(); ctx.shadowBlur = 0; t++;
-        hdrAnimId = requestAnimationFrame(draw);
-      }
-      draw();
-    }
+        function addHdrSpike(mag) {
+            S.hdrSpikes.push({ amp: Math.min((mag || 2) / 7 * 5, 5), life: 70, total: 70, dec: 0.04, freq: 0.25 + Math.random() * 0.2 });
+        }
 
-    function addHdrSpike(mag) {
-      S.hdrSpikes.push({ amp: Math.min((mag || 2) / 7 * 5, 5), life: 70, total: 70, dec: 0.04, freq: 0.25 + Math.random() * 0.2 });
-    }
-
-    function makeXIcon(col, sz, isNew) {
-      const s = Math.max(sz, 14), p = Math.max(3, s * 0.18);
-      const anim = isNew ? 'style="animation:xAppear 0.35s cubic-bezier(0.22,1,0.36,1) both"' : '';
-      const glow = isNew ? sz + 4 : sz * 0.4;
-      const svg = `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" overflow="visible" ${anim}>
+        function makeXIcon(col, sz, isNew) {
+            const s = Math.max(sz, 14), p = Math.max(3, s * 0.18);
+            const anim = isNew ? 'style="animation:xAppear 0.35s cubic-bezier(0.22,1,0.36,1) both"' : '';
+            const glow = isNew ? sz + 4 : sz * 0.4;
+            const svg = `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" overflow="visible" ${anim}>
     <line x1="${p}" y1="${p}" x2="${s - p}" y2="${s - p}" stroke="${col}" stroke-width="2.5" stroke-linecap="round" filter="url(#g)"/>
     <line x1="${s - p}" y1="${p}" x2="${p}" y2="${s - p}" stroke="${col}" stroke-width="2.5" stroke-linecap="round" filter="url(#g)"/>
     <defs><filter id="g"><feDropShadow dx="0" dy="0" stdDeviation="${glow * 0.4}" flood-color="${col}"/></filter></defs>
   </svg>`;
-      return L.divIcon({ className: '', html: svg, iconSize: [s, s], iconAnchor: [s / 2, s / 2] });
-    }
+            return L.divIcon({ className: '', html: svg, iconSize: [s, s], iconAnchor: [s / 2, s / 2] });
+        }
 
-    async function initMap() {
-      S.map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([35, 137], 4);
-      L.control.zoom({ position: 'bottomright' }).addTo(S.map);
-      setTimeout(() => S.map.invalidateSize(), 100);
+        async function initMap() {
+            if (S.map) return;
 
-      try {
-        const worldTopo = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json());
-        const worldFeatures = topojson.feature(worldTopo, worldTopo.objects.countries);
-        L.geoJSON(worldFeatures, {
-          style: { color: 'rgba(255,255,255,0.16)', weight: 0.6, fillColor: '#131820', fillOpacity: 0.95 },
-          interactive: false
-        }).addTo(S.map);
-      } catch (e) { }
+            S.map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false,
+                maxBounds: [[20, 120], [50, 155]],
+                minZoom: 4,
+                preferCanvas: true
+            }).setView([38, 138], 5);
 
-      try {
-        const r = await fetch('https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson');
-        if (!r.ok) throw new Error();
-        const gj = await r.json();
-        S.prefLayer = L.geoJSON(gj, {
-          style: { color: 'rgba(255,255,255,0.28)', weight: 0.9, fillColor: '#0d1422', fillOpacity: 0.9 },
-          interactive: false
-        }).addTo(S.map);
-      } catch (e) { }
+            L.tileLayer(
+                'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+                {
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }
+            ).addTo(S.map);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_only_labels/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18, opacity: 0.35, pane: 'overlayPane'
-      }).addTo(S.map);
+            L.rectangle(
+                [[20, 120], [50, 155]],
+                {
+                    color: 'transparent',
+                    fillColor: '#0b0f14',
+                    fillOpacity: 0.55,
+                    interactive: false
+                }
+            ).addTo(S.map);
 
-      MAJOR_CITIES.forEach(c => {
-        const m = L.marker([c.lat, c.lng], {
-          icon: L.divIcon({
-            className: '',
-            html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
-          <div style="width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.55)"></div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);white-space:nowrap;margin-top:2px;text-shadow:0 0 4px rgba(0,0,0,1)">${c.n}</span>
-        </div>`,
-            iconSize: [50, 22], iconAnchor: [25, 2]
-          }),
-          interactive: false, zIndexOffset: -100
-        }).addTo(S.map);
-        S.cityMarkerList.push(m);
-      });
+            try {
+                const r = await fetch('https://cdn.jsdelivr.net/gh/code4fukui/jma_seismic_area@main/jma_seismic_area.geojson');
+                if (!r.ok) throw new Error();
 
-      try {
-        const res = await fetch('https://raw.githubusercontent.com/code4fukui/jma_seismic_area/main/jma_seismic_area.topojson');
-        const topo = await res.json();
-        areaGeoJson = topojson.feature(topo, topo.objects.jma_seismic_area);
-        console.log("区域データの読み込みが完了しました");
-      } catch (e) {
-        console.error("区域データの取得に失敗しました:", e);
-      }
-    }
+                const regionGeo = await r.json();
 
-    function refreshMarkers() {
-      S.markers.forEach((marker, id) => {
-        const latest = S.quakes[0]?._id;
-        const show = S.selectedId ? id === S.selectedId : id === latest;
-        if (show) { if (!S.map.hasLayer(marker)) marker.addTo(S.map); }
-        else { if (S.map.hasLayer(marker)) S.map.removeLayer(marker); }
-      });
-    }
+                S.regionLayer = L.geoJSON(regionGeo, {
+                    style: {
+                        color: '#cfd6df',
+                        weight: 1.1,
+                        opacity: 0.65,
+                        fillOpacity: 0
+                    },
+                    interactive: false
+                }).addTo(S.map);
 
-    function putMarker(eq, isNew = false) {
-      if (!S.map) return;
-
-      if (currentAreaLayer) {
-        S.map.removeLayer(currentAreaLayer);
-        currentAreaLayer = null;
-      }
-
-      if (areaGeoJson && eq.points) {
-        const areaScales = {};
-        eq.points.forEach(p => {
-          areaScales[p.addr] = p.scale;
-        });
-
-        currentAreaLayer = L.geoJSON(areaGeoJson, {
-          style: (feature) => {
-            const scale = areaScales[feature.properties.name];
-            if (scale) {
-              return {
-                fillColor: intInfo(scale).color,
-                fillOpacity: 0.7,
-                color: '#111',
-                weight: 1
-              };
+                console.log("区域線読み込み成功");
+            } catch (e) {
+                console.warn('区域線読み込み失敗', e);
             }
-            return { fillOpacity: 0, color: 'transparent', weight: 0 };
-          },
-          interactive: false
-        }).addTo(S.map);
-      }
+        }
 
-      const h = eq.earthquake.hypocenter;
-      if (!h.latitude || !h.longitude || h.latitude === -200) return;
+        function refreshMarkers() {
+            S.markers.forEach((marker, id) => {
+                const latest = S.quakes[0]?._id;
+                const show = S.selectedId ? id === S.selectedId : id === latest;
+                if (show) { if (!S.map.hasLayer(marker)) marker.addTo(S.map); }
+                else { if (S.map.hasLayer(marker)) S.map.removeLayer(marker); }
+            });
+        }
 
-      if (S.markers.has(eq._id)) {
-        S.map.removeLayer(S.markers.get(eq._id));
-      }
+        function putMarker(eq, isNew = false) {
+            if (!S.map) return;
 
-      const mag = h.magnitude || 0, sc = eq.earthquake.maxScale;
-      const col = sc > 0 ? intInfo(sc).color : magColor(mag);
-      const icon = makeXIcon(col, magSize(mag), isNew);
-      const d = intInfo(sc);
+            const h = eq.earthquake.hypocenter;
+            if (!h.latitude || !h.longitude || h.latitude === -200) return;
 
-      const pop = `<div class="popup-content">
-    <div class="popup-mag ${magCls(mag)}">${mag > 0 ? 'M' + mag.toFixed(1) : 'M?'}</div>
-    <div class="popup-place">${esc(h.name || '震源地不明')}</div>
-    <div class="popup-tags">
-      ${sc > 0 ? `<span class="popup-tag ${d.cls}">震度${d.lbl}</span>` : ''}
-      ${h.depth > 0 ? `<span class="popup-tag">深さ ${h.depth}km</span>` : ''}
-      <span class="popup-tag">${fmtDateTime(eq.earthquake.time)}</span>
-    </div>
-  </div>`;
+            if (S.markers.has(eq._id)) {
+                S.map.removeLayer(S.markers.get(eq._id));
+            }
 
-      const marker = L.marker([h.latitude, h.longitude], {
-        icon,
-        zIndexOffset: 1000
-      })
-        .bindPopup(pop, { maxWidth: 240 })
-        .on('click', () => selectQ(eq._id));
+            const mag = h.magnitude || 0;
+            const sc = eq.earthquake.maxScale;
+            const col = sc > 0 ? intInfo(sc).color : magColor(mag);
 
-      S.markers.set(eq._id, marker);
-      refreshMarkers();
-    }
+            const marker = L.marker(
+                [h.latitude, h.longitude],
+                {
+                    icon: makeXIcon(col, magSize(mag), isNew),
+                    zIndexOffset: 1000
+                }
+            ).addTo(S.map);
 
-    function playWaves(lat, lng, mag) {
-      stopWaves(); if (!S.map) return;
-      const base = Math.max(80000, (mag || 3) * 90000), maxR = base * 3.2;
-      S.pWave = L.circle([lat, lng], { radius: 3000, color: '#ff3348', weight: 1.5, fill: false, opacity: 0.9, interactive: false }).addTo(S.map);
-      S.sWave = L.circle([lat, lng], { radius: 3000, color: '#ff8a00', weight: 2, fillColor: '#ff8a00', fillOpacity: 0.03, opacity: 0.75, interactive: false }).addTo(S.map);
-      let pR = 3000, sR = 3000;
-      const pSpd = base * 0.026, sSpd = base * 0.016;
-      function tick() {
-        pR = Math.min(pR + pSpd, maxR); sR = Math.min(sR + sSpd, maxR);
-        const pOp = Math.max(0, 0.9 * (1 - pR / maxR)), sOp = Math.max(0, 0.75 * (1 - sR / maxR));
-        if (S.pWave) { S.pWave.setRadius(pR); S.pWave.setStyle({ opacity: pOp }); }
-        if (S.sWave) { S.sWave.setRadius(sR); S.sWave.setStyle({ opacity: sOp, fillOpacity: sOp * 0.05 }); }
-        if (pR < maxR) S.waveTimer = requestAnimationFrame(tick);
-        else stopWaves();
-      }
-      S.waveTimer = requestAnimationFrame(tick);
-    }
+            S.markers.set(eq._id, marker);
 
-    function stopWaves() {
-      if (S.waveTimer) { cancelAnimationFrame(S.waveTimer); S.waveTimer = null; }
-      if (S.pWave && S.map) { S.map.removeLayer(S.pWave); S.pWave = null; }
-      if (S.sWave && S.map) { S.map.removeLayer(S.sWave); S.sWave = null; }
-    }
+            refreshMarkers();
+        }
 
-    function showIntensityDist(eq) {
-      clearIntensityLayer();
-      if (!eq) return;
-      const pts = (eq.points || []);
-      if (!pts.length) return;
+        function playWaves(lat, lng, mag) {
+            stopWaves(); if (!S.map) return;
+            const base = Math.max(80000, (mag || 3) * 90000), maxR = base * 3.2;
+            S.pWave = L.circle([lat, lng], { radius: 3000, color: '#ff3348', weight: 1.5, fill: false, opacity: 0.9, interactive: false }).addTo(S.map);
+            S.sWave = L.circle([lat, lng], { radius: 3000, color: '#ff8a00', weight: 2, fillColor: '#ff8a00', fillOpacity: 0.03, opacity: 0.75, interactive: false }).addTo(S.map);
+            let pR = 3000, sR = 3000;
+            const pSpd = base * 0.026, sSpd = base * 0.016;
+            function tick() {
+                pR = Math.min(pR + pSpd, maxR); sR = Math.min(sR + sSpd, maxR);
+                const pOp = Math.max(0, 0.9 * (1 - pR / maxR)), sOp = Math.max(0, 0.75 * (1 - sR / maxR));
+                if (S.pWave) { S.pWave.setRadius(pR); S.pWave.setStyle({ opacity: pOp }); }
+                if (S.sWave) { S.sWave.setRadius(sR); S.sWave.setStyle({ opacity: sOp, fillOpacity: sOp * 0.05 }); }
+                if (pR < maxR) S.waveTimer = requestAnimationFrame(tick);
+                else stopWaves();
+            }
+            S.waveTimer = requestAnimationFrame(tick);
+        }
 
-      const prefMax = {};
-      pts.forEach(p => {
-        if (p.scale > 0 && (!prefMax[p.pref] || p.scale > prefMax[p.pref])) prefMax[p.pref] = p.scale;
-      });
+        function stopWaves() {
+            if (S.waveTimer) { cancelAnimationFrame(S.waveTimer); S.waveTimer = null; }
+            if (S.pWave && S.map) { S.map.removeLayer(S.pWave); S.pWave = null; }
+            if (S.sWave && S.map) { S.map.removeLayer(S.sWave); S.sWave = null; }
+        }
 
-      if (S.prefLayer) {
-        S.prefLayer.eachLayer(layer => {
-          const n = layer.feature.properties.nam_ja || '';
-          const sc = prefMax[n] || 0;
-          if (sc > 0) { const ii = intInfo(sc); layer.setStyle({ fillColor: ii.color, fillOpacity: 0.38 }); }
-          else layer.setStyle({ fillColor: '#0d1422', fillOpacity: 0.9 });
-        });
-      }
+        function showIntensityDist(eq) {
+            clearIntensityLayer();
+            if (!eq?.points?.length) return;
 
-      const shownRegions = new Set();
-      pts.forEach(p => {
-        if (!p.scale || p.scale < 0) return;
-        const regionKey = (p.pref || '') + (p.addr || '');
-        const simpleKey = p.addr || '';
-        const coords = REGION_CENTERS[regionKey] || REGION_CENTERS[simpleKey] || PREF_CENTERS[p.pref];
-        if (!coords || shownRegions.has(regionKey)) return;
-        shownRegions.add(regionKey);
-        const ii = intInfo(p.scale);
-        const label = p.addr || p.pref || '';
-        const m = L.marker(coords, {
-          icon: L.divIcon({
-            className: '',
-            html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
-          <div style="background:${ii.color}dd;border:2px solid ${ii.color};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.9);box-shadow:0 0 12px ${ii.color}88">${ii.lbl}</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:600;color:${ii.color};white-space:nowrap;margin-top:2px;text-shadow:0 0 4px rgba(0,0,0,1)">${esc(label)}</span>
-        </div>`,
-            iconSize: [60, 34], iconAnchor: [30, 4]
-          }),
-          interactive: false, zIndexOffset: 500
-        }).addTo(S.map);
-        S.intensityMarkers.push(m);
-      });
+            const shown = new Set();
 
-      Object.entries(prefMax).forEach(([pref, sc]) => {
-        const hasRegion = pts.some(p => p.pref === pref && (REGION_CENTERS[(p.pref || '') + (p.addr || '')] || REGION_CENTERS[p.addr || '']));
-        if (hasRegion) return;
-        const coords = PREF_CENTERS[pref];
-        if (!coords) return;
-        const ii = intInfo(sc);
-        const m = L.marker(coords, {
-          icon: L.divIcon({
-            className: '',
-            html: `<div style="background:${ii.color}dd;border:2px solid ${ii.color};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.9);box-shadow:0 0 12px ${ii.color}88;pointer-events:none">${ii.lbl}</div>`,
-            iconSize: [22, 22], iconAnchor: [11, 11]
-          }),
-          interactive: false, zIndexOffset: 400
-        }).addTo(S.map);
-        S.intensityMarkers.push(m);
-      });
-    }
+            eq.points.forEach(p => {
+                if (!p.scale) return;
 
-    function clearIntensityLayer() {
-      S.intensityMarkers.forEach(m => { if (S.map) S.map.removeLayer(m); });
-      S.intensityMarkers = [];
-      if (S.prefLayer) S.prefLayer.eachLayer(layer => layer.setStyle({ fillColor: '#0d1422', fillOpacity: 0.9 }));
-    }
+                const regionKey =
+                    REGION_CENTERS[p.addr] ? p.addr :
+                        REGION_CENTERS[(p.pref || '') + (p.addr || '')] ? (p.pref + p.addr) :
+                            null;
 
-    function renderDetail(eq) {
-      const grid = document.getElementById('stat-grid');
-      const panel = document.getElementById('detail-panel');
-      const title = document.getElementById('left-panel-title');
-      const back = document.getElementById('detail-back');
-      if (!eq) {
-        grid.classList.remove('hidden'); panel.classList.add('hidden');
-        title.textContent = '本日の統計'; back.classList.add('hidden'); return;
-      }
-      grid.classList.add('hidden'); panel.classList.remove('hidden');
-      title.textContent = '選択中の地震'; back.classList.remove('hidden');
-      const h = eq.earthquake.hypocenter, m = h.magnitude || 0, sc = eq.earthquake.maxScale;
-      const ii = intInfo(sc), tsun = eq.earthquake.domesticTsunami;
-      panel.innerHTML = `
+                if (!regionKey) return;
+                if (shown.has(regionKey)) return;
+
+                shown.add(regionKey);
+
+                const ii = intInfo(p.scale);
+
+                const marker = L.marker(REGION_CENTERS[regionKey], {
+                    icon: L.divIcon({
+                        className: '',
+                        html: `
+<div style="
+width:22px;
+height:22px;
+border-radius:50%;
+background:${ii.color};
+border:2px solid rgba(255,255,255,0.9);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:11px;
+font-weight:bold;
+color:#fff;
+box-shadow:0 0 10px ${ii.color};
+">
+${ii.lbl}
+</div>
+                `,
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 11]
+                    }),
+                    interactive: false,
+                    zIndexOffset: 500
+                }).addTo(S.map);
+
+                S.intensityMarkers.push(marker);
+            });
+        }
+
+        function clearIntensityLayer() {
+            S.intensityMarkers.forEach(m => {
+                if (S.map) S.map.removeLayer(m);
+            });
+
+            S.intensityMarkers = [];
+        }
+
+        function renderDetail(eq) {
+            const grid = document.getElementById('stat-grid');
+            const panel = document.getElementById('detail-panel');
+            const title = document.getElementById('left-panel-title');
+            const back = document.getElementById('detail-back');
+            if (!eq) {
+                grid.classList.remove('hidden'); panel.classList.add('hidden');
+                title.textContent = '本日の統計'; back.classList.add('hidden'); return;
+            }
+            grid.classList.add('hidden'); panel.classList.remove('hidden');
+            title.textContent = '選択中の地震'; back.classList.remove('hidden');
+            const h = eq.earthquake.hypocenter, m = h.magnitude || 0, sc = eq.earthquake.maxScale;
+            const ii = intInfo(sc), tsun = eq.earthquake.domesticTsunami;
+            panel.innerHTML = `
     <div class="dp-row"><span class="dp-key">震源地</span><span class="dp-val sm">${esc(h.name || '不明')}</span></div>
     <div class="dp-row"><span class="dp-key">マグニチュード</span><span class="dp-val ${magCls(m)}">${m > 0 ? 'M' + m.toFixed(1) : 'M?'}</span></div>
     <div class="dp-row"><span class="dp-key">最大震度</span><span class="dp-val ${ii.cls}">${sc > 0 ? '震度' + ii.lbl : '—'}</span></div>
@@ -2311,57 +2258,57 @@
     <div class="dp-row"><span class="dp-key">発生時刻</span><span class="dp-val sm">${fmtDateTime(eq.earthquake.time)}</span></div>
     ${tsun && tsun !== 'None' ? `<div class="dp-row"><span class="dp-key">津波情報</span><span class="dp-val tsun">${tsun === 'NoneExpected' ? '心配なし' : '注意'}</span></div>` : ''}
   `;
-    }
-
-    function processQ(raw, isNew = false) {
-      if (raw.code !== 551) return null;
-      const id = raw.id || (raw.earthquake.time + '_' + raw.earthquake.hypocenter.name);
-      if (S.quakes.find(q => q._id === id)) return null;
-      const eq = { ...raw, _id: id, _new: isNew };
-      S.quakes.unshift(eq);
-      if (S.quakes.length > MAX_QUAKES) S.quakes.pop();
-      S.stats.total++;
-      const eqDate = parseEqDate(eq.earthquake.time).toDateString();
-      if (eqDate === TODAY) {
-        S.stats.count++;
-        const m = eq.earthquake.hypocenter.magnitude || 0;
-        if (m > S.stats.maxMag) { S.stats.maxMag = m; S.stats.maxMagPlace = eq.earthquake.hypocenter.name || ''; }
-        const sc = eq.earthquake.maxScale;
-        if (sc > S.stats.maxScale) { S.stats.maxScale = sc; S.stats.maxIntLbl = intInfo(sc).lbl; }
-      }
-      putMarker(eq, isNew);
-      if (isNew) {
-        addHdrSpike(eq.earthquake.hypocenter.magnitude);
-        const h = eq.earthquake.hypocenter, m = h.magnitude || 0, sc = eq.earthquake.maxScale;
-        if (h.latitude && h.longitude && h.latitude !== -200 && S.map) {
-          S.map.flyTo([h.latitude, h.longitude], 6, { duration: 1.4 });
-          playWaves(h.latitude, h.longitude, m);
         }
-        if (m >= ALERT_MAG || sc >= 40) showAlert(eq);
-      }
-      return eq;
-    }
 
-    function renderList() {
-      const el = document.getElementById('eq-list');
-      const filt = S.quakes.filter(q => {
-        if ((q.earthquake.hypocenter.magnitude || 0) < S.filterMag) return false;
-        if (S.filterInt > 0 && q.earthquake.maxScale < S.filterInt) return false;
-        return true;
-      });
-      if (!filt.length) {
-        el.innerHTML = `<div class="no-data"><div class="no-data-icon">🔍</div><div class="no-data-txt">条件に一致なし</div></div>`;
-        return;
-      }
-      el.innerHTML = '';
-      filt.forEach(q => {
-        const h = q.earthquake.hypocenter, m = h.magnitude || 0, sc = q.earthquake.maxScale;
-        const ii = intInfo(sc), tsun = q.earthquake.domesticTsunami;
-        const card = document.createElement('div');
-        card.className = `eq-card${q._new ? ' new-flash' : ' new-in'}${q._id === S.selectedId ? ' sel' : ''}`;
-        card.dataset.id = q._id;
-        if (q._new) setTimeout(() => { q._new = false; }, 2000);
-        card.innerHTML = `
+        function processQ(raw, isNew = false) {
+            if (raw.code !== 551) return null;
+            const id = raw.id || (raw.earthquake.time + '_' + raw.earthquake.hypocenter.name);
+            if (S.quakes.find(q => q._id === id)) return null;
+            const eq = { ...raw, _id: id, _new: isNew };
+            S.quakes.unshift(eq);
+            if (S.quakes.length > MAX_QUAKES) S.quakes.pop();
+            S.stats.total++;
+            const eqDate = parseEqDate(eq.earthquake.time).toDateString();
+            if (eqDate === TODAY) {
+                S.stats.count++;
+                const m = eq.earthquake.hypocenter.magnitude || 0;
+                if (m > S.stats.maxMag) { S.stats.maxMag = m; S.stats.maxMagPlace = eq.earthquake.hypocenter.name || ''; }
+                const sc = eq.earthquake.maxScale;
+                if (sc > S.stats.maxScale) { S.stats.maxScale = sc; S.stats.maxIntLbl = intInfo(sc).lbl; }
+            }
+            putMarker(eq, isNew);
+            if (isNew) {
+                addHdrSpike(eq.earthquake.hypocenter.magnitude);
+                const h = eq.earthquake.hypocenter, m = h.magnitude || 0, sc = eq.earthquake.maxScale;
+                if (h.latitude && h.longitude && h.latitude !== -200 && S.map) {
+                    S.map.flyTo([h.latitude, h.longitude], 6, { duration: 1.4 });
+                    playWaves(h.latitude, h.longitude, m);
+                }
+                if (m >= ALERT_MAG || sc >= 40) showAlert(eq);
+            }
+            return eq;
+        }
+
+        function renderList() {
+            const el = document.getElementById('eq-list');
+            const filt = S.quakes.filter(q => {
+                if ((q.earthquake.hypocenter.magnitude || 0) < S.filterMag) return false;
+                if (S.filterInt > 0 && q.earthquake.maxScale < S.filterInt) return false;
+                return true;
+            });
+            if (!filt.length) {
+                el.innerHTML = `<div class="no-data"><div class="no-data-icon">🔍</div><div class="no-data-txt">条件に一致なし</div></div>`;
+                return;
+            }
+            el.innerHTML = '';
+            filt.forEach(q => {
+                const h = q.earthquake.hypocenter, m = h.magnitude || 0, sc = q.earthquake.maxScale;
+                const ii = intInfo(sc), tsun = q.earthquake.domesticTsunami;
+                const card = document.createElement('div');
+                card.className = `eq-card${q._new ? ' new-flash' : ' new-in'}${q._id === S.selectedId ? ' sel' : ''}`;
+                card.dataset.id = q._id;
+                if (q._new) setTimeout(() => { q._new = false; }, 2000);
+                card.innerHTML = `
       <div class="eq-top">
         <div class="eq-mbadge ${magCls(m)}">${m > 0 ? 'M' + m.toFixed(1) : 'M?'}</div>
         <div class="eq-info">
@@ -2374,217 +2321,217 @@
         ${h.depth > 0 ? `<span class="eq-tag">深さ ${h.depth}km</span>` : ''}
         ${tsun && tsun !== 'None' ? `<span class="eq-tag tsun">津波: ${tsun === 'NoneExpected' ? '心配なし' : '注意'}</span>` : ''}
       </div>`;
-        card.addEventListener('click', () => selectQ(q._id));
-        el.appendChild(card);
-      });
-    }
+                card.addEventListener('click', () => selectQ(q._id));
+                el.appendChild(card);
+            });
+        }
 
-    function renderMiniList() {
-      const el = document.getElementById('mini-list');
-      const today = S.quakes.filter(q => parseEqDate(q.earthquake.time).toDateString() === TODAY).slice(0, 15);
-      if (!today.length) {
-        el.innerHTML = `<div class="no-data"><div class="no-data-icon">📡</div><div class="no-data-txt">データ待機中...</div></div>`;
-        return;
-      }
-      el.innerHTML = '';
-      today.forEach(q => {
-        const h = q.earthquake.hypocenter, m = h.magnitude || 0;
-        const d = document.createElement('div');
-        d.className = 'mini-item';
-        d.innerHTML = `<div class="mini-mag ${magCls(m)}">${m > 0 ? m.toFixed(1) : '?'}</div>
+        function renderMiniList() {
+            const el = document.getElementById('mini-list');
+            const today = S.quakes.filter(q => parseEqDate(q.earthquake.time).toDateString() === TODAY).slice(0, 15);
+            if (!today.length) {
+                el.innerHTML = `<div class="no-data"><div class="no-data-icon">📡</div><div class="no-data-txt">データ待機中...</div></div>`;
+                return;
+            }
+            el.innerHTML = '';
+            today.forEach(q => {
+                const h = q.earthquake.hypocenter, m = h.magnitude || 0;
+                const d = document.createElement('div');
+                d.className = 'mini-item';
+                d.innerHTML = `<div class="mini-mag ${magCls(m)}">${m > 0 ? m.toFixed(1) : '?'}</div>
       <div class="mini-info"><div class="mini-place">${esc(h.name || '不明')}</div><div class="mini-time">${fmtTime(q.earthquake.time)}</div></div>`;
-        d.addEventListener('click', () => selectQ(q._id));
-        el.appendChild(d);
-      });
-    }
-
-    function updateStats() {
-      document.getElementById('s-count').textContent = S.stats.count || '0';
-      document.getElementById('s-total').textContent = S.stats.total || '0';
-      if (S.stats.maxMag > 0) {
-        document.getElementById('s-maxmag').textContent = 'M' + S.stats.maxMag.toFixed(1);
-        document.getElementById('s-maxmag-place').textContent = (S.stats.maxMagPlace || '').slice(0, 8);
-      }
-      if (S.stats.maxScale > 0) document.getElementById('s-maxint').textContent = '震度' + S.stats.maxIntLbl;
-    }
-
-    function selectQ(id) {
-      S.selectedId = id;
-      const q = S.quakes.find(e => e._id === id);
-      if (q && S.map) {
-        const h = q.earthquake.hypocenter;
-        if (h.latitude && h.longitude && h.latitude !== -200) {
-          S.map.flyTo([h.latitude, h.longitude], 6, { duration: 0.9 });
-          playWaves(h.latitude, h.longitude, h.magnitude);
+                d.addEventListener('click', () => selectQ(q._id));
+                el.appendChild(d);
+            });
         }
-        renderDetail(q);
-        showIntensityDist(q);
-      }
-      refreshMarkers();
-      renderList();
-    }
 
-    function showAlert(q) {
-      const h = q.earthquake.hypocenter, m = h.magnitude || 0, sc = q.earthquake.maxScale, ii = intInfo(sc);
-      document.getElementById('alrt-icon').textContent = m >= 6.5 ? '🚨' : m >= 5 ? '⚠️' : '📳';
-      document.getElementById('alrt-title').textContent = m >= 6 ? '大地震発生！' : m >= 5 ? '強い地震が発生' : m >= 4 ? '地震発生' : '地震情報';
-      document.getElementById('alrt-place').textContent = h.name || '震源地不明';
-      document.getElementById('alrt-detail').textContent = `M${m.toFixed(1)} / 深さ${h.depth || '?'}km${sc > 0 ? ' / 最大震度' + ii.lbl : ''}`;
-      const bar = document.getElementById('alrt-bar');
-      bar.style.animation = 'none'; bar.offsetHeight; bar.style.animation = '';
-      document.getElementById('eq-alert').classList.add('show');
-      clearTimeout(S.alertTimer);
-      S.alertTimer = setTimeout(() => document.getElementById('eq-alert').classList.remove('show'), 6000);
-    }
+        function updateStats() {
+            document.getElementById('s-count').textContent = S.stats.count || '0';
+            document.getElementById('s-total').textContent = S.stats.total || '0';
+            if (S.stats.maxMag > 0) {
+                document.getElementById('s-maxmag').textContent = 'M' + S.stats.maxMag.toFixed(1);
+                document.getElementById('s-maxmag-place').textContent = (S.stats.maxMagPlace || '').slice(0, 8);
+            }
+            if (S.stats.maxScale > 0) document.getElementById('s-maxint').textContent = '震度' + S.stats.maxIntLbl;
+        }
 
-    let ws;
-    function connectWS() {
-      setWS('wait');
-      ws = new WebSocket(WS_URL);
-      ws.onopen = () => { setWS('live'); S.wsRetryDelay = 2000; };
-      ws.onerror = () => setWS('off');
-      ws.onclose = () => {
-        setWS('off');
-        setTimeout(() => { S.wsRetryDelay = Math.min(S.wsRetryDelay * 1.6, 30000); connectWS(); }, S.wsRetryDelay);
-      };
-      ws.onmessage = ev => {
-        try {
-          const d = JSON.parse(ev.data);
-          if (d.code === 551) { const q = processQ(d, true); if (q) { renderList(); renderMiniList(); updateStats(); } }
-          else if (d.code === 554) {
-            const ov = document.createElement('div'); ov.className = 'eew-flash';
-            document.body.appendChild(ov); setTimeout(() => ov.remove(), 3200);
-            addHdrSpike(7);
-          }
-        } catch (e) { }
-      };
-    }
+        function selectQ(id) {
+            S.selectedId = id;
+            const q = S.quakes.find(e => e._id === id);
+            if (q && S.map) {
+                const h = q.earthquake.hypocenter;
+                if (h.latitude && h.longitude && h.latitude !== -200) {
+                    S.map.flyTo([h.latitude, h.longitude], 6, { duration: 0.9 });
+                    playWaves(h.latitude, h.longitude, h.magnitude);
+                }
+                renderDetail(q);
+                showIntensityDist(q);
+            }
+            refreshMarkers();
+            renderList();
+        }
 
-    function setWS(status) {
-      const dot = document.getElementById('ws-dot'), lbl = document.getElementById('ws-label');
-      dot.className = 'ws-dot ' + status;
-      lbl.textContent = status === 'live' ? '接続済み' : status === 'wait' ? '接続中' : '切断中';
-    }
+        function showAlert(q) {
+            const h = q.earthquake.hypocenter, m = h.magnitude || 0, sc = q.earthquake.maxScale, ii = intInfo(sc);
+            document.getElementById('alrt-icon').textContent = m >= 6.5 ? '🚨' : m >= 5 ? '⚠️' : '📳';
+            document.getElementById('alrt-title').textContent = m >= 6 ? '大地震発生！' : m >= 5 ? '強い地震が発生' : m >= 4 ? '地震発生' : '地震情報';
+            document.getElementById('alrt-place').textContent = h.name || '震源地不明';
+            document.getElementById('alrt-detail').textContent = `M${m.toFixed(1)} / 深さ${h.depth || '?'}km${sc > 0 ? ' / 最大震度' + ii.lbl : ''}`;
+            const bar = document.getElementById('alrt-bar');
+            bar.style.animation = 'none'; bar.offsetHeight; bar.style.animation = '';
+            document.getElementById('eq-alert').classList.add('show');
+            clearTimeout(S.alertTimer);
+            S.alertTimer = setTimeout(() => document.getElementById('eq-alert').classList.remove('show'), 6000);
+        }
 
-    async function fetchHistory() {
-      try {
-        const r = await fetch(HIST_URL); if (!r.ok) return;
-        const data = await r.json();
-        if (Array.isArray(data)) [...data].reverse().forEach(d => processQ(d, false));
-      } catch (e) { console.warn('History fetch failed', e); }
-    }
+        let ws;
+        function connectWS() {
+            setWS('wait');
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => { setWS('live'); S.wsRetryDelay = 2000; };
+            ws.onerror = () => setWS('off');
+            ws.onclose = () => {
+                setWS('off');
+                setTimeout(() => { S.wsRetryDelay = Math.min(S.wsRetryDelay * 1.6, 30000); connectWS(); }, S.wsRetryDelay);
+            };
+            ws.onmessage = ev => {
+                try {
+                    const d = JSON.parse(ev.data);
+                    if (d.code === 551) { const q = processQ(d, true); if (q) { renderList(); renderMiniList(); updateStats(); } }
+                    else if (d.code === 554) {
+                        const ov = document.createElement('div'); ov.className = 'eew-flash';
+                        document.body.appendChild(ov); setTimeout(() => ov.remove(), 3200);
+                        addHdrSpike(7);
+                    }
+                } catch (e) { }
+            };
+        }
 
-    function initFilters() {
-      const sl = document.getElementById('fmag'), mv = document.getElementById('fmv');
-      sl.addEventListener('input', () => { S.filterMag = parseFloat(sl.value); mv.textContent = 'M' + S.filterMag.toFixed(1) + '+'; renderList(); });
-      document.getElementById('fint').addEventListener('click', e => {
-        const c = e.target.closest('.chip'); if (!c) return;
-        document.querySelectorAll('#fint .chip').forEach(x => x.classList.remove('on'));
-        c.classList.add('on'); S.filterInt = parseInt(c.dataset.int);
-        document.getElementById('fiv').textContent = c.dataset.int === '-1' ? '全て' : c.textContent;
-        renderList();
-      });
-    }
+        function setWS(status) {
+            const dot = document.getElementById('ws-dot'), lbl = document.getElementById('ws-label');
+            dot.className = 'ws-dot ' + status;
+            lbl.textContent = status === 'live' ? '接続済み' : status === 'wait' ? '接続中' : '切断中';
+        }
 
-    const clOverlay = document.getElementById('changelog-overlay');
-    const clList = document.getElementById('changelog-list');
-    const clClose = document.getElementById('changelog-close');
-    const clConfirm = document.getElementById('changelog-confirm');
-    const clBtn = document.getElementById('changelog-btn');
+        async function fetchHistory() {
+            try {
+                const r = await fetch(HIST_URL); if (!r.ok) return;
+                const data = await r.json();
+                if (Array.isArray(data)) [...data].reverse().forEach(d => processQ(d, false));
+            } catch (e) { console.warn('History fetch failed', e); }
+        }
 
-    function renderChangelog(logs, unreadMode = false) {
-      clList.innerHTML = '';
-      logs.forEach(log => {
-        const item = document.createElement('div'); item.className = 'cl-item';
-        item.innerHTML = `<div class="cl-item-hdr"><span class="cl-ver">${esc(log.version)}</span><span class="cl-date">${esc(log.date)}</span></div>
+        function initFilters() {
+            const sl = document.getElementById('fmag'), mv = document.getElementById('fmv');
+            sl.addEventListener('input', () => { S.filterMag = parseFloat(sl.value); mv.textContent = 'M' + S.filterMag.toFixed(1) + '+'; renderList(); });
+            document.getElementById('fint').addEventListener('click', e => {
+                const c = e.target.closest('.chip'); if (!c) return;
+                document.querySelectorAll('#fint .chip').forEach(x => x.classList.remove('on'));
+                c.classList.add('on'); S.filterInt = parseInt(c.dataset.int);
+                document.getElementById('fiv').textContent = c.dataset.int === '-1' ? '全て' : c.textContent;
+                renderList();
+            });
+        }
+
+        const clOverlay = document.getElementById('changelog-overlay');
+        const clList = document.getElementById('changelog-list');
+        const clClose = document.getElementById('changelog-close');
+        const clConfirm = document.getElementById('changelog-confirm');
+        const clBtn = document.getElementById('changelog-btn');
+
+        function renderChangelog(logs, unreadMode = false) {
+            clList.innerHTML = '';
+            logs.forEach(log => {
+                const item = document.createElement('div'); item.className = 'cl-item';
+                item.innerHTML = `<div class="cl-item-hdr"><span class="cl-ver">${esc(log.version)}</span><span class="cl-date">${esc(log.date)}</span></div>
       <div class="cl-title">${esc(log.title)}</div><div class="cl-desc">${esc(log.desc)}</div>`;
-        clList.appendChild(item);
-      });
-      if (unreadMode) { clConfirm.classList.remove('hidden'); clClose.classList.add('hidden'); }
-      else { clConfirm.classList.add('hidden'); clClose.classList.remove('hidden'); }
-    }
-
-    function checkUnreadCL() {
-      const read = JSON.parse(localStorage.getItem('seismo_read_logs') || '[]');
-      const unread = UPDATE_LOGS.filter(l => !read.includes(l.id));
-      let badge = clBtn.querySelector('.unread-badge');
-      if (unread.length > 0) {
-        if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge'; clBtn.appendChild(badge); }
-        renderChangelog(unread, true); clOverlay.classList.remove('hidden');
-      } else if (badge) badge.remove();
-    }
-
-    function markCLRead() {
-      localStorage.setItem('seismo_read_logs', JSON.stringify(UPDATE_LOGS.map(l => l.id)));
-      clBtn.querySelector('.unread-badge')?.remove();
-    }
-
-    clBtn.addEventListener('click', () => { renderChangelog(UPDATE_LOGS, false); clOverlay.classList.remove('hidden'); markCLRead(); });
-    clClose.addEventListener('click', () => clOverlay.classList.add('hidden'));
-    clConfirm.addEventListener('click', () => { markCLRead(); clOverlay.classList.add('hidden'); });
-    clOverlay.addEventListener('click', e => { if (e.target === clOverlay && clConfirm.classList.contains('hidden')) clOverlay.classList.add('hidden'); });
-
-    const tutOverlay = document.getElementById('tutorial-overlay');
-    document.getElementById('tutorial-start').addEventListener('click', () => {
-      localStorage.setItem('seismo_tutorial_shown', '1');
-      tutOverlay.classList.add('hidden'); checkUnreadCL();
-    });
-    document.getElementById('help-btn').addEventListener('click', () => tutOverlay.classList.remove('hidden'));
-    tutOverlay.addEventListener('click', e => { if (e.target === tutOverlay) tutOverlay.classList.add('hidden'); });
-
-    document.getElementById('detail-back').addEventListener('click', () => {
-      S.selectedId = null; renderDetail(null); clearIntensityLayer(); stopWaves(); refreshMarkers(); renderList();
-      if (S.map) S.map.flyTo([35, 137], 4, { duration: 0.8 });
-    });
-
-    document.getElementById('eq-alert').addEventListener('click', () => document.getElementById('eq-alert').classList.remove('show'));
-
-    function openAdGuide() { document.getElementById('ad-guide-modal').style.display = 'flex'; }
-    function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
-
-    window.addEventListener('load', () => {
-      const checkAd = setInterval(() => {
-        const adArea = document.querySelector('.ad-content-area');
-        const iframe = adArea.querySelector('iframe');
-        const placeholder = document.querySelector('.ad-placeholder');
-
-        if (iframe && iframe.offsetHeight > 10) {
-          placeholder.style.display = 'none';
-          console.log("Ad detected. Message hidden.");
-          clearInterval(checkAd);
+                clList.appendChild(item);
+            });
+            if (unreadMode) { clConfirm.classList.remove('hidden'); clClose.classList.add('hidden'); }
+            else { clConfirm.classList.add('hidden'); clClose.classList.remove('hidden'); }
         }
-      }, 1000);
 
-      setTimeout(() => clearInterval(checkAd), 10000);
-    });
+        function checkUnreadCL() {
+            const read = JSON.parse(localStorage.getItem('seismo_read_logs') || '[]');
+            const unread = UPDATE_LOGS.filter(l => !read.includes(l.id));
+            let badge = clBtn.querySelector('.unread-badge');
+            if (unread.length > 0) {
+                if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge'; clBtn.appendChild(badge); }
+                renderChangelog(unread, true); clOverlay.classList.remove('hidden');
+            } else if (badge) badge.remove();
+        }
 
-    function setLdStatus(txt) {
-      document.getElementById('ld-status').innerHTML = txt + '<span class="blink">.</span><span class="blink2">.</span><span class="blink3">.</span>';
-    }
+        function markCLRead() {
+            localStorage.setItem('seismo_read_logs', JSON.stringify(UPDATE_LOGS.map(l => l.id)));
+            clBtn.querySelector('.unread-badge')?.remove();
+        }
 
-    async function init() {
-      startLoadingAnim();
-      const bar = document.getElementById('ld-bar');
-      setLdStatus('地震データを取得中');
-      await Promise.all([new Promise(r => setTimeout(r, 1200)), fetchHistory().catch(() => { })]);
-      setLdStatus('マップを準備中');
-      bar.style.transition = 'width 600ms ease-out'; bar.style.width = '100%';
-      document.getElementById('loading').classList.add('fade-out');
-      setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
-      document.getElementById('app').classList.remove('hidden');
-      requestAnimationFrame(async () => {
-        await initMap();
-        initFilters();
-        S.quakes.forEach(q => putMarker(q, false));
-        renderList(); renderMiniList(); updateStats(); startHdrAnim(); connectWS();
-        cancelAnimationFrame(ldAnimId);
-        if (!localStorage.getItem('seismo_tutorial_shown')) { tutOverlay.classList.remove('hidden'); }
-        else checkUnreadCL();
-      });
-    }
+        clBtn.addEventListener('click', () => { renderChangelog(UPDATE_LOGS, false); clOverlay.classList.remove('hidden'); markCLRead(); });
+        clClose.addEventListener('click', () => clOverlay.classList.add('hidden'));
+        clConfirm.addEventListener('click', () => { markCLRead(); clOverlay.classList.add('hidden'); });
+        clOverlay.addEventListener('click', e => { if (e.target === clOverlay && clConfirm.classList.contains('hidden')) clOverlay.classList.add('hidden'); });
 
-    init();
-  </script>
+        const tutOverlay = document.getElementById('tutorial-overlay');
+        document.getElementById('tutorial-start').addEventListener('click', () => {
+            localStorage.setItem('seismo_tutorial_shown', '1');
+            tutOverlay.classList.add('hidden'); checkUnreadCL();
+        });
+        document.getElementById('help-btn').addEventListener('click', () => tutOverlay.classList.remove('hidden'));
+        tutOverlay.addEventListener('click', e => { if (e.target === tutOverlay) tutOverlay.classList.add('hidden'); });
+
+        document.getElementById('detail-back').addEventListener('click', () => {
+            S.selectedId = null; renderDetail(null); clearIntensityLayer(); stopWaves(); refreshMarkers(); renderList();
+            if (S.map) S.map.flyTo([35, 137], 4, { duration: 0.8 });
+        });
+
+        document.getElementById('eq-alert').addEventListener('click', () => document.getElementById('eq-alert').classList.remove('show'));
+
+        function openAdGuide() { document.getElementById('ad-guide-modal').style.display = 'flex'; }
+        function closeAdGuide() { document.getElementById('ad-guide-modal').style.display = 'none'; }
+
+        window.addEventListener('load', () => {
+            const checkAd = setInterval(() => {
+                const adArea = document.querySelector('.ad-content-area');
+                const iframe = adArea.querySelector('iframe');
+                const placeholder = document.querySelector('.ad-placeholder');
+
+                if (iframe && iframe.offsetHeight > 10) {
+                    placeholder.style.display = 'none';
+                    console.log("Ad detected. Message hidden.");
+                    clearInterval(checkAd);
+                }
+            }, 1000);
+
+            setTimeout(() => clearInterval(checkAd), 10000);
+        });
+
+        function setLdStatus(txt) {
+            document.getElementById('ld-status').innerHTML = txt + '<span class="blink">.</span><span class="blink2">.</span><span class="blink3">.</span>';
+        }
+
+        async function init() {
+            startLoadingAnim();
+            const bar = document.getElementById('ld-bar');
+            setLdStatus('地震データを取得中');
+            await Promise.all([new Promise(r => setTimeout(r, 1200)), fetchHistory().catch(() => { })]);
+            setLdStatus('マップを準備中');
+            bar.style.transition = 'width 600ms ease-out'; bar.style.width = '100%';
+            document.getElementById('loading').classList.add('fade-out');
+            setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
+            document.getElementById('app').classList.remove('hidden');
+            requestAnimationFrame(async () => {
+                await initMap();
+                initFilters();
+                S.quakes.forEach(q => putMarker(q, false));
+                renderList(); renderMiniList(); updateStats(); startHdrAnim(); connectWS();
+                cancelAnimationFrame(ldAnimId);
+                if (!localStorage.getItem('seismo_tutorial_shown')) { tutOverlay.classList.remove('hidden'); }
+                else checkUnreadCL();
+            });
+        }
+
+        init();
+    </script>
 </body>
 
 </html>
