@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
     <script src="regionGeo_v2.js"></script>
+    <script src="prefectures.js"></script>
     <script src="cityCoords.js"></script>
     <style>
         :root {
@@ -1833,6 +1834,17 @@
 
         const UPDATE_LOGS = [
             {
+                id: 'v1.2.0', version: 'v1.2.0', date: '2026-05-01',
+                title: 'マップ・震度分布修正アップデート',
+                desc: '以下の改善・修正をしました。\n\n'
+                    + '・震度分布表示時にマーカーが重なって表示される問題を修正\n'
+                    + '・震度分布が完全でなかったバグを修正\n'
+                    + '　　・まだ把握できていない地震受信場所があります。\n　　　地震を選択したときにコンソールに未登録の受信場所が送られるので、Github（左上ロゴをクリック）のIssuesで報告してもらえると幸いです。\n'
+                    + '・都道府県、区域の境界線を追加\n'
+                    + '　　・区域の境界線が直線なので地形に合わせるように修正する予定です。\n'
+                    + '・ロシアの表示にバグが発生した問題を完全に修正'
+            },
+            {
                 id: 'v1.1.1', version: 'v1.1.1', date: '2026-04-24',
                 title: 'マップ・表示品質アップデート',
                 desc: '以下の修正・改善を行いました。\n\n'
@@ -2026,8 +2038,15 @@
         function startHdrAnim() {
             const cv = document.getElementById('hdr-canvas'); if (!cv) return;
             const ctx = cv.getContext('2d');
-            const resize = () => { cv.width = cv.offsetWidth; cv.height = cv.offsetHeight; };
-            resize(); new ResizeObserver(resize).observe(cv);
+            const resize = () => {
+                if (cv.offsetWidth > 0 && cv.offsetHeight > 0) {
+                    cv.width = cv.offsetWidth;
+                    cv.height = cv.offsetHeight;
+                }
+            };
+            cv.width = cv.offsetWidth || 300;
+            cv.height = cv.offsetHeight || 38;
+            new ResizeObserver(resize).observe(cv);
             const data = []; let t = 0;
             function draw() {
                 const W = cv.width, H = cv.height, MID = H / 2;
@@ -2097,21 +2116,32 @@
                     fillOpacity: 0.55,
                     interactive: false
                 }
-            ).addTo(S.map);
-            try {
+            ).addTo(S.map); try {
                 S.regionLayer = L.geoJSON(regionGeo, {
                     style: {
-                        color: 'rgba(255,255,255,0.28)',
-                        weight: 1,
+                        color: 'rgba(255,255,255,0.1)',
+                        weight: 0.8,
                         fillOpacity: 0
                     },
                     interactive: false
                 }).addTo(S.map);
 
+                if (window.prefGeo) {
+                    L.geoJSON(window.prefGeo, {
+                        style: {
+                            color: 'rgba(255,255,255,0.6)',
+                            weight: 1.6,
+                            fillOpacity: 0
+                        },
+                        interactive: false
+                    }).addTo(S.map);
+                    console.log("県境の描画に成功しました");
+                }
+
                 console.log("区域線読み込み成功");
 
             } catch (e) {
-                console.error('区域線読み込み失敗:', e);
+                console.error('区域線・県境の描画失敗:', e);
             }
         }
 
@@ -2195,6 +2225,9 @@
                     areaScaleMap[regionName] = p.scale;
                 }
             });
+            console.log([...unmatchedAreas]);
+            unmatchedAreas.clear();
+            //ここで送信されます。受け取った場合はGithubのIssuesで報告してください。
 
             S.regionLayer.eachLayer(layer => {
                 const name = layer.feature.properties.name;
@@ -2501,8 +2534,6 @@
             }
 
             unmatchedAreas.add(areaName);
-            console.log([...unmatchedAreas]);
-            unmatchedAreas.clear();
 
             return null;
         }
