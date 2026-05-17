@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="SEISMO — リアルタイム地震モニター | 5kaideta.cfd">
+    <meta property="og:site_name" content="SEISMO — リアルタイム地震モニター">
+    <meta property="og:description" content="リアルタイム地震情報を地図上に可視化。GitHub Pages版よりも高速で安定した環境を提供します。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://earthquake.5kaideta.cfd">
+    <meta property="og:image" content="https://earthquake.5kaideta.cfd/ogp-thumbnail.png">
+    <meta property="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>SEISMO — リアルタイム地震モニター | 5kaideta.cfd</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
+    <script src="regionGeo.js" defer></script>
+    <script src="prefectures.js" defer></script>
+    <script src="cityCoords.js" defer></script>
+    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+    <link href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css"
+        rel="stylesheet" />
+
+
+</head>
+
+<body>
+    <div id="loading">
+        <div class="ld-logo">SEISMO<span>.</span></div>
+        <div class="ld-sub" data-i18n="ldSub">リアルタイム地震モニター</div>
+        <div class="ld-ver">ver. 2.1.2</div>
+        <canvas id="ld-canvas" width="420" height="72"></canvas>
+        <div class="ld-status" id="ld-status"><span data-i18n="ldWait">接続中</span><span class="blink">.</span><span
+                class="blink2">.</span><span class="blink3">.</span></div>
+        <div class="ld-bar-wrap">
+            <div class="ld-bar" id="ld-bar"></div>
+        </div>
+    </div>
+
+    <div class="overlay hidden" id="tutorial-overlay">
+        <div class="tutorial-card">
+            <div class="tutorial-head">
+                <div class="tutorial-eyebrow" data-i18n="tutGuide">はじめに — GUIDE</div>
+                <div class="tutorial-h1" data-i18n="tutTitle">SEISMO<span>.</span> の使い方</div>
+                <div class="tutorial-desc" data-i18n="tutDesc">P2P地震情報WebSocketを使ったリアルタイム地震モニタリングシステム</div>
+            </div>
+            <div class="tutorial-body">
+                <div class="feat-grid">
+                    <div class="feat-card">
+                        <div class="feat-icon">🗺️</div>
+                        <div class="feat-name" data-i18n="f1n">リアルタイムマップ</div>
+                        <div class="feat-text" data-i18n="f1d">震源地を×マーカーで即時反映。クリックで震度分布を細分区域ごとに可視化。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">📡</div>
+                        <div class="feat-name" data-i18n="f2n">WebSocket受信</div>
+                        <div class="feat-text" data-i18n="f2d">P2P地震情報からリアルタイムで気象庁データを受信。自動再接続機能付き。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🌊</div>
+                        <div class="feat-name" data-i18n="f3n">P波・S波アニメーション</div>
+                        <div class="feat-text" data-i18n="f3d">地震発生時に震源からP波（赤）・S波（橙）が広がるアニメーションを表示。自動追尾。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🔔</div>
+                        <div class="feat-name" data-i18n="f4n">地震アラート</div>
+                        <div class="feat-text" data-i18n="f4d">M4.0以上または震度4以上を自動検知してポップアップ通知。EEW受信時は画面点滅。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">📊</div>
+                        <div class="feat-name" data-i18n="f5n">詳細サイドパネル</div>
+                        <div class="feat-text" data-i18n="f5d">リスト選択で左パネルに震源地・M・震度・深さ・時刻を詳細表示。</div>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon">🔍</div>
+                        <div class="feat-name" data-i18n="f6n">フィルター機能</div>
+                        <div class="feat-text" data-i18n="f6d">マグニチュード・最大震度でリストとマップを絞り込み。スライダーとチップで直感操作。</div>
+                    </div>
+                    <div class="feat-card" style="grid-column: span 2;">
+                        <div class="feat-icon">📤</div>
+                        <div class="feat-name" data-i18n="f7n">未登録観測値報告機能</div>
+                        <div class="feat-text" data-i18n="f7d">コンソールに未確認の観測値があった場合表示。結果を <a href="/request">報告</a> できます。
+                        </div>
+                    </div>
+                </div>
+                <div class="int-legend">
+                    <div class="int-legend-title" data-i18n="intLeg">震度カラーコード（マーカー・バッジ・分布共通）</div>
+                    <div class="int-rows">
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#9ec5fe"></div><span class="int-lbl"
+                                data-i18n="intL1">震度1</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#60a5fa"></div><span class="int-lbl"
+                                data-i18n="intL2">震度2</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#4ade80"></div><span class="int-lbl"
+                                data-i18n="intL3">震度3</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#facc15"></div><span class="int-lbl"
+                                data-i18n="intL4">震度4</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#fb923c"></div><span class="int-lbl"
+                                data-i18n="intL5m">震度5弱</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#f97316"></div><span class="int-lbl"
+                                data-i18n="intL5p">震度5強</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#ef4444"></div><span class="int-lbl"
+                                data-i18n="intL6m">震度6弱</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#dc2626"></div><span class="int-lbl"
+                                data-i18n="intL6p">震度6強</span>
+                        </div>
+                        <div class="int-row">
+                            <div class="int-dot" style="background:#cc44ff"></div><span class="int-lbl"
+                                data-i18n="intL7">震度7</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; color: #475569; font-size: 0.8rem; margin-top:10px;">
+                    version. 2.1.2.1
+                </div>
+                <div style="text-align: center; color: #475569; font-size: 0.8rem; margin-top:10px;">
+                    &copy; 2026 5kaideta.cfd / Yuuto. All Rights Reserved.
+                </div>
+            </div>
+            <div class="tutorial-foot"><button class="start-btn" id="tutorial-start" data-i18n="startBtn">モニタリングを開始する
+                    →</button></div>
+        </div>
+    </div>
+
+    <div class="overlay hidden" id="changelog-overlay">
+        <div class="changelog-card">
+            <div class="changelog-hdr">
+                <div class="changelog-hdr-title" data-i18n="clTitle">アップデートログ</div>
+                <button class="close-btn" id="changelog-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16"
+                        height="16">
+                        <path
+                            d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="changelog-scroll">
+                <div id="changelog-list"></div>
+                <button class="cl-confirm-btn hidden" id="changelog-confirm" data-i18n="clBtn">確認して閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <header class="hdr">
+            <a href="https://earthquake.5kaideta.cfd" class="hdr-logo">SEISMO<span>.</span></a>
+            <canvas id="hdr-canvas"></canvas>
+            <div class="hdr-right">
+                <div class="ws-pill">
+                    <div class="ws-dot wait" id="ws-dot"></div>
+                    <span class="ws-label" id="ws-label" data-i18n="wsWait">接続中</span>
+                </div>
+                <div class="lang-switch">
+                    <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+                    <button class="lang-btn" onclick="setLang('ja')" id="btn-ja">JA</button>
+                </div>
+                <nav class="hdr-nav">
+                    <button class="nav-btn" id="request-btn" data-i18n="navReq">リクエスト</button>
+                    <button class="nav-btn" id="list-btn" data-i18n="navList">リスト</button>
+                    <button class="nav-btn" id="help-btn" data-i18n="navHelp">ヘルプ</button>
+                    <button class="nav-btn" id="changelog-btn" style="position:relative"
+                        data-i18n="navLog">更新履歴</button>
+                    <button class="nav-btn" id="changelog-detalis-btn"
+                        style="margin-left: -10px; padding-left: 1px;font-size: 60%;"
+                        data-i18n="navLogDetalis">(詳細)</button>
+                </nav>
+            </div>
+        </header>
+
+        <div class="body">
+            <div id="sidebar" class="left">
+                <div class="sec">
+                    <div class="sec-title-row">
+                        <div class="sec-title" id="left-panel-title" data-i18n="sTitle">本日の統計</div>
+                        <button class="detail-back-btn hidden" id="detail-back" data-i18n="sBack">← 戻る</button>
+                    </div>
+                    <div class="stat-grid" id="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-lbl" data-i18n="stCount">発生件数</div>
+                            <div class="stat-val c-cyan" id="s-count">—</div>
+                            <div class="stat-sub" data-i18n="stToday">今日</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl" data-i18n="stMaxM">最大 M</div>
+                            <div class="stat-val c-red" id="s-maxmag">—</div>
+                            <div class="stat-sub" id="s-maxmag-place">—</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl" data-i18n="stMaxI">最大震度</div>
+                            <div class="stat-val c-orange" id="s-maxint">—</div>
+                            <div class="stat-sub" data-i18n="stObs">観測</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl" data-i18n="stTotal">総受信</div>
+                            <div class="stat-val c-green" id="s-total">0</div>
+                            <div class="stat-sub" data-i18n="stTimes">件</div>
+                        </div>
+                    </div>
+                    <div class="detail-panel hidden" id="detail-panel"></div>
+                </div>
+                <div class="sec">
+                    <div class="sec-title-row" style="margin-bottom:0.65rem">
+                        <div class="sec-title" data-i18n="fTitle">フィルター</div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-lbl"><span data-i18n="fMinM">最小 M</span> <em id="fmv">1.0+</em></div>
+                        <input type="range" id="fmag" min="1" max="7" step="0.5" value="1">
+                    </div>
+                    <div class="filter-row" style="margin-bottom:0">
+                        <div class="filter-lbl"><span data-i18n="fMaxI">最大震度</span> <em id="fiv"
+                                data-i18n="fAll">全て</em></div>
+                        <div class="chips" id="fint">
+                            <div class="chip on" data-int="-1" data-i18n="fAll">全て</div>
+                            <div class="chip" data-int="10">1+</div>
+                            <div class="chip" data-int="20">2+</div>
+                            <div class="chip" data-int="30">3+</div>
+                            <div class="chip" data-int="40">4+</div>
+                            <div class="chip" data-int="45" data-i18n="intL5m">5弱+</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec" style="border-bottom:none;padding-bottom:0.3rem;">
+                    <div class="sec-title" data-i18n="actTitle">本日の地震 — アクティビティ</div>
+                </div>
+                <div class="scroll-area">
+                    <div class="mini-list" id="mini-list">
+                        <div class="no-data">
+                            <div class="no-data-icon">📡</div>
+                            <div class="no-data-txt" data-i18n="noWait">データ待機中...</div>
+                        </div>
+                    </div>
+                    <div class="ad-wrap">
+                        <div class="ad-outer-container">
+                            <div class="ad-placeholder">
+                                <p id="ad-msg">広告が表示されません。<br>開発を支援していただけませんか？</p>
+                                <button class="btn-guide-open" onclick="openAdGuide()" data-i18n="ad3">[ 広告ブロックの解除方法
+                                    ]</button>
+                            </div>
+                            <div class="ad-content-area">
+                                <script src="https://adm.shinobi.jp/s/1cce5f105ce057d5473198129dcc5afa"></script>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map-container" style="position: relative; flex: 1;">
+                <div id="map"></div>
+                <div id="map-clock">
+                    <span style="font-size: 0.7rem; opacity: 0.6; color: var(--text-2);"
+                        data-i18n="presentTime">現在時間</span>
+                    <span id="current-time-val">00:00:00</span>
+                </div>
+            </div>
+
+            <div class="right">
+                <div class="right-hdr">
+                    <div class="right-hdr-title" data-i18n="listTitle">地震リスト</div>
+                    <div class="live-badge">
+                        <div class="live-dot"></div>LIVE
+                    </div>
+                </div>
+                <div class="eq-list" id="eq-list">
+                    <div class="no-data">
+                        <div class="no-data-icon">🌐</div>
+                        <div class="no-data-txt" data-i18n="noRecv">データを受信中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="eq-alert">
+        <div class="alrt-icon" id="alrt-icon">⚠️</div>
+        <div>
+            <div class="alrt-title" id="alrt-title">地震発生</div>
+            <div class="alrt-place" id="alrt-place">—</div>
+            <div class="alrt-detail" id="alrt-detail">—</div>
+        </div>
+        <div class="alrt-bar-wrap">
+            <div class="alrt-bar" id="alrt-bar"></div>
+        </div>
+    </div>
+
+    <div id="ad-guide-modal">
+        <div class="ad-modal-body">
+            <h3 data-i18n="adM1">広告ブロックの解除方法</h3>
+            <p data-i18n="adM2">お使いのブロッカーのアイコンをクリックし、「このサイトでオフにする」を選択してください。解除後、ページを再読み込みすると広告が表示されます。</p>
+            <button class="ad-modal-reload" onclick="location.reload();" data-i18n="adRel">再読み込み</button>
+            <button class="ad-modal-close" onclick="closeAdGuide()" data-i18n="adCls">閉じる</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script defer
+        src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447"
+        integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ=="
+        data-cf-beacon='{"version":"2024.11.0","token":"c8ca306a77cd4e3cb28bbee795fa1f29","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}'
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="SEISMO — Update Log | 5kaideta.cfd">
+    <meta property="og:site_name" content="SEISMO — Update Log">
+    <meta property="og:description" content="SEISMOの更新履歴・アップデートログです。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://earthquake.5kaideta.cfd/updatelog">
+    <meta property="og:image" content="https://earthquake.5kaideta.cfd/ogp-thumbnail.png">
+    <meta property="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>SEISMO — Update Log | 5kaideta.cfd</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030507;
+            --accent: #00f2ff;
+            --bg-card: #0b0f18;
+            --border: #161c28;
+            --text: #e2e8f0;
+            --cyan-dim: rgba(0, 216, 255, 0.08);
+            --badge-new: rgba(16, 185, 129, 0.15);
+            --badge-new-text: #10b981;
+            --badge-fix: rgba(239, 68, 68, 0.15);
+            --badge-fix-text: #ef4444;
+            --badge-imp: rgba(234, 179, 8, 0.15);
+            --badge-imp-text: #eab308;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Barlow', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--accent);
+            margin: 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .lang-switch {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 216, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            color: #475569;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        .lang-btn:hover {
+            color: var(--text);
+        }
+
+        .lang-btn.active {
+            background: var(--cyan-dim);
+            color: var(--accent);
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 25px;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+
+        .item:hover {
+            border-color: rgba(0, 242, 255, 0.3);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .version {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .date {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .changes {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .changes li {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .changes li:last-child {
+            margin-bottom: 0;
+        }
+
+        .tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .tag.new {
+            background: var(--badge-new);
+            color: var(--badge-new-text);
+        }
+
+        .tag.fix {
+            background: var(--badge-fix);
+            color: var(--badge-fix-text);
+        }
+
+        .tag.imp {
+            background: var(--badge-imp);
+            color: var(--badge-imp-text);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 40px;
+            color: #64748b;
+            text-decoration: none;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 data-i18n="title">Update Log</h1>
+            <div id="lastUpdated"
+                style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; color: #64748b; margin-top: 6px;">
+            </div>
+            <div class="lang-switch">
+                <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+                <button class="lang-btn" onclick="setLang('ja')" id="btn-ja">JA</button>
+            </div>
+        </div>
+
+        <div class="list" id="logList">
+            <!-- ログはjsで生成 -->
+        </div>
+
+        <a href="/" class="back-link" data-i18n="retMonitor">← Return to Monitor</a>
+    </div>
+
+    <script>
+        const i18n = {
+            en: {
+                title: "Update Log",
+                retMonitor: "← Return to Monitor",
+                tags: { new: "NEW", fix: "FIX", imp: "IMP" },
+                lastUp: "Last Updated: "
+            },
+            ja: {
+                title: "更新履歴",
+                retMonitor: "← モニターへ戻る",
+                tags: { new: "新機能", fix: "修正", imp: "改善" },
+                lastUp: "最終更新: "
+            }
+        };
+
+        const links = {
+            top: "https://earthquake.5kaideta.cfd",
+            request: "https://earthquake.5kaideta.cfd/request",
+            status: "https://earthquake.5kaideta.cfd/status",
+            thumb: "https://earthquake.5kaideta.cfd/ogp-thumbnail.png",
+            fav: "https://earthquake.5kaideta.cfd/favicon.ico",
+        };
+
+        const updateLogs = [
+            {
+                version: "v2.1.2.1",
+                date: "2026.05.17",
+                changes: [
+                    {
+                        type: "new",
+                        en: "We have added a detailed update log page. Here, we will post minor updates that are not included in the main update log.",
+                        ja: "詳細なアップデートログページを追加しました。ここではアップデートログに載せないような細かなアップデートを載せていきます。",
+                    },
+                    {
+                        type: "imp",
+                        en: "We have added the epicenter to the English translation. If there are any locations that have not been translated into English, please report the epicenter names <link request>here</link>.",
+                        ja: "英訳に震源地を追加しました。もし英訳されていない場所があったら<link request>こちら</link>で震源地名を報告してください。"
+                    },
+                    {
+                        type: "fix",
+                        en: "We have updated the version information. We have also added the version information to the help modal.",
+                        ja: "バージョン表記を修正しました。それとともに、ヘルプモーダルにもバージョンの表記を追加しました。"
+                    }
+                ]
+            },
+            {
+                version: "v2.1.2",
+                date: "2026.05.17",
+                changes: [
+                    {
+                        type: "fix",
+                        en: "Fixed a critical issue where clicking on an earthquake in the earthquake list did not display the seismic intensity distribution on the map.",
+                        ja: "重大な問題であった、地震リスト内の地震をクリックしてもマップに震度分布が表示されない問題を修正しました。"
+                    },
+                    {
+                        type: "fix",
+                        en: "Fixed an issue where styles were not applied to the 'Today's Activity' list.",
+                        ja: "本日の地震リストにスタイルが反映されない問題を修正しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "I've added OGP (Open Graph Protocol) elements to the site, such as a favicon and a site thumbnail.",
+                        ja: "サイトに<link fav>favicon</link>や<link thumb>サイトのサムネ</link>などのOGP (Open Graph Protocol) を追加しました。"
+                    }
+                ]
+            },
+            {
+                version: "v2.1.1",
+                date: "2026.05.12",
+                changes: [
+                    {
+                        type: "fix",
+                        en: "We fixed a bug that caused the header to disappear when clicking on the map, which had existed previously.",
+                        ja: "前から存在していた、マップ内をクリックするとヘッダーが消えるバグを修正しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We added a clock to the map.",
+                        ja: "マップ内に時刻を追加しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We added zoom in/out buttons to the map.",
+                        ja: "マップ内にマップの拡大縮小ボタンを設置しました。"
+                    }
+                ]
+            },
+            {
+                version: "v2.1.0",
+                date: "2026.05.12",
+                changes: [
+                    {
+                        type: "new",
+                        en: "Added language settings (English and Japanese) to the Home, Requests, and Status pages. We plan to add more languages in the future.",
+                        ja: "ホーム、リクエスト、ステータスページへの言語設定機能（英語・日本語）を追加しました。複数の言語を追加していく予定です。"
+                    },
+                    {
+                        type: "imp",
+                        en: "Implemented across all sections; standardized areas that were previously partially in English.",
+                        ja: "すべての箇所に対応、一部英語だった部分を統一しました。"
+                    }
+                ]
+            },
+            {
+                version: "v2.0.1",
+                date: "2026.05.10",
+                changes: [
+                    {
+                        type: "new",
+                        en: "Added Request Page for unregistered locations. Unknown locations appear in the console. Submit the array directly. Link: <link request>https://earthquake.5kaideta.cfd/request</link>",
+                        ja: "未登録の地点を送信する、リクエストページの追加（コンソールに未登録地点のリストが表示されます。その配列を丸ごと送信してください。 ページはこちらから：<link request>https://earthquake.5kaideta.cfd/request</link>）"
+                    },
+                    {
+                        type: "new",
+                        en: "Added Status Page to view requested locations. Link: <link status>https://earthquake.5kaideta.cfd/status</link>",
+                        ja: "ステータスページの追加（ページはこちらから：<link status>https://earthquake.5kaideta.cfd/status</link>）"
+                    },
+                    {
+                        type: "new",
+                        en: "Added multiple unregistered locations.",
+                        ja: "その他、複数の未登録地点を追加しました。"
+                    }
+                ]
+            },
+            {
+                version: "v2.0.0 - Website migration",
+                date: "2026.05.10",
+                changes: [
+                    {
+                        type: "imp",
+                        en: "Moved SEISMO to <link top>earthquake.5kaideta.cfd</link> following the domain purchase.",
+                        ja: "5kaideta.cfdの購入にともない、SEISMOを<link top>earthquake.5kaideta.cfd</link>へと移設しました。"
+                    }
+                ]
+            },
+            {
+                version: "v1.2.0",
+                date: "2026.05.01",
+                changes: [
+                    {
+                        type: "fix",
+                        en: "Fixed marker overlap on intensity distribution.",
+                        ja: "震度分布表示時にマーカーが重なって表示される問題を修正しました。"
+                    },
+                    {
+                        type: "fix",
+                        en: "Fixed incomplete intensity distribution bug.",
+                        ja: "震度分布が完全でなかったバグを修正しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "Added borders for prefectures and regions.",
+                        ja: "都道府県、区域の境界線を追加しました。"
+                    },
+                    {
+                        type: "fix",
+                        en: "We have fully resolved the issue causing a display error for Russia on the map.",
+                        ja: "地図内でロシアの表示にバグが発生していた問題を完全に修正しました。"
+                    }
+                ]
+            },
+            {
+                version: "v1.1.1",
+                date: "2026.04.24",
+                changes: [
+                    {
+                        type: "fix",
+                        en: "We have fixed a bug that caused the time to display as “Invalid Date.”",
+                        ja: "時刻がInvalid Dateと表示されるバグを修正しました。"
+                    },
+                    {
+                        type: "imp",
+                        en: "We changed the map background to black and added the names of neighboring countries.",
+                        ja: "マップの背景を黒に変更し、周辺国の表示を追加しました。"
+                    },
+                    {
+                        type: "imp",
+                        en: "We have refined the seismic intensity distribution categories to the sub-district level.",
+                        ja: "震度分布の区分を細分区域レベルにしました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We've added an ad section. If you're using an ad blocker, please turn it off to support our development efforts.",
+                        ja: "広告エリアを追加しました。広告ブロッカーを使用している場合はオフにして開発を支援してください。"
+                    }
+                ]
+            },
+            {
+                version: "v1.1.0",
+                date: "2026.04.24",
+                changes: [
+                    {
+                        type: "new",
+                        en: "We've added a feature that automatically zooms the map to the epicenter when you select an earthquake, and displays animations of P-waves and S-waves.",
+                        ja: "地震を選択したときにマップを震源地に自動追尾し、P波・S波のアニメーションが出てくる機能を追加しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We have added an “×” marker to the epicenter.",
+                        ja: "震源地に×印の表示を追加しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We have added a feature to display earthquake details in the left panel.",
+                        ja: "左パネルに地震の詳細を表示する機能を追加しました。"
+                    },
+                    {
+                        type: "new",
+                        en: "We have added a feature that displays seismic intensity distributions by prefecture.",
+                        ja: "都道府県ごとに震度分布を表示する機能を追加しました。"
+                    }
+                ]
+            },
+            {
+                version: "v1.0.1",
+                date: "2026.04.23",
+                changes: [
+                    {
+                        type: "fix",
+                        en: "Fixed an issue where the map was not displaying correctly.",
+                        ja: "地図が正しく表示されない問題を修正しました。"
+                    }
+                ]
+            },
+            {
+                version: "v1.0.0",
+                date: "2026.04.23",
+                changes: [
+                    {
+                        type: "new",
+                        en: "Released SEISMO, the real-time earthquake monitor!",
+                        ja: "リアルタイム地震モニター「SEISMO」をリリースしました！"
+                    }
+                ]
+            }
+        ];
+
+        let currentLang = localStorage.getItem('seismo_lang') || (navigator.language.startsWith('ja') ? 'ja' : 'en');
+
+        function renderLogs() {
+            const list = document.getElementById('logList');
+            list.innerHTML = '';
+
+            updateLogs.forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'item';
+
+                let changesHtml = '';
+                log.changes.forEach(c => {
+                    const tagText = i18n[currentLang].tags[c.type];
+                    let text = currentLang === 'ja' ? c.ja : c.en;
+
+                    text = parseCustomLinks(text);
+
+                    changesHtml += `<li><span class="tag ${c.type}">${tagText}</span><span>${text}</span></li>`;
+                });
+
+                item.innerHTML = `
+                    <div class="item-header">
+                        <div class="version">${log.version}</div>
+                        <div class="date">${log.date}</div>
+                    </div>
+                    <ul class="changes">
+                        ${changesHtml}
+                    </ul>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('seismo_lang', lang);
+            document.documentElement.lang = lang;
+
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+            document.getElementById('btn-ja').classList.toggle('active', lang === 'ja');
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) el.innerText = i18n[lang][key];
+            });
+
+            const latestDate = updateLogs[0].date.replace(/\./g, '/');
+            document.getElementById('lastUpdated').innerText = i18n[lang].lastUp + latestDate;
+
+            renderLogs();
+        }
+
+        function parseCustomLinks(text) {
+            return text.replace(/<link\s+([^>]+)>(.*?)<\/link>/g, (match, key, content) => {
+                const url = links[key.trim()];
+                if (url) {
+                    return `<a href="${url}" style="color: var(--accent); text-decoration: underline;">${content}</a>`;
+                }
+                return content;
+            });
+        }
+
+        setLang(currentLang);
+    </script>
+</body>
+
+</html>
