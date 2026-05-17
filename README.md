@@ -1,4 +1,4 @@
-# SEISMO — Earthquake Monitor v2.5.0
+# SEISMO — Earthquake Monitor v2.1.2
 
 A highly functional, real-time earthquake monitoring and visualization tool featuring a robust, secure backend for managing user feedback and location requests. Migrated from GitHub Pages to a dedicated domain and empowered by a hardened Supabase backend.
 
@@ -61,6 +61,11 @@ To completely eliminate vulnerable front-end login bypasses (such as manually ov
 - `regionGeo_v2.js`: Precise GeoJSON boundary schemas for sub-prefecture regions
 - `prefectures.js`: Precise GeoJSON boundaries for prefecture outlines
 - `cityCoords.js`: Regional and municipal geographical mapping coordinates
+
+## 🕑️ Update Logs
+
+You can view the update log from the following link.
+https://earthquake.5kaideta.cfd/updatelog
 
 ## 📦 Local Development & Deployment
 
