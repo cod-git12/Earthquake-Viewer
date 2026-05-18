@@ -12,7 +12,7 @@ const i18n = {
         f5n: "Detail Panel", f5d: "Displays epicenter, M, intensity, depth, and time in the left panel.",
         f6n: "Filters", f6d: "Filter list and map by Mag and Max Intensity using sliders and chips.",
         f7n: "Report Feature", f7d: "Logs unregistered locations to console. You can <a href='/request'>report</a> them.",
-        intLeg: "Intensity Color Code", startBtn: "Start Monitoring →",
+        intLeg: "Intensity Color Code", startBtn: "Start Monitoring →", helppageBtn: "Open detailed help →",
         intL1: "Int 1", intL2: "Int 2", intL3: "Int 3", intL4: "Int 4", intL5m: "Int 5-", intL5p: "Int 5+", intL6m: "Int 6-", intL6p: "Int 6+", intL7: "Int 7",
         clTitle: "Update Log", clBtn: "Confirm & Close",
         wsWait: "Connecting", wsLive: "Connected", wsOff: "Disconnected",
@@ -41,7 +41,7 @@ const i18n = {
         f5n: "詳細サイドパネル", f5d: "リスト選択で左パネルに震源地・M・震度・深さ・時刻を詳細表示。",
         f6n: "フィルター機能", f6d: "マグニチュード・最大震度でリストとマップを絞り込み。スライダーとチップで直感操作。",
         f7n: "未登録観測値報告機能", f7d: "コンソールに未確認の観測値があった場合表示。結果を <a href='/request'>報告</a> できます。",
-        intLeg: "震度カラーコード（マーカー・バッジ・分布共通）", startBtn: "モニタリングを開始する →",
+        intLeg: "震度カラーコード（マーカー・バッジ・分布共通）", startBtn: "モニタリングを開始する →", helppageBtn: "詳細なヘルプを開く→",
         intL1: "震度1", intL2: "震度2", intL3: "震度3", intL4: "震度4", intL5m: "震度5弱", intL5p: "震度5強", intL6m: "震度6弱", intL6p: "震度6強", intL7: "震度7",
         clTitle: "アップデートログ", clBtn: "確認して閉じる",
         wsWait: "接続中", wsLive: "接続済み", wsOff: "切断中",
@@ -147,6 +147,14 @@ const EPICENTER_EN = {
 };
 
 const UPDATE_LOGS = [
+    {
+        id: 'v2.1.3', version: 'v2.1.3', date: '2026-05-18',
+        title: { ja: '詳細なヘルプ（システムドキュメント / 取扱説明書）の追加', en: 'Addition of detailed help (system documentation / user manuals)' },
+        desc: {
+            ja: '現在存在しているヘルプモーダルよりも詳しく書かれた<link https://earthquake.5kaideta.cfd/help>システムドキュメント</link>を追加しました。',
+            en: 'We have added <link https://earthquake.5kaideta.cfd/help>system documentation</link> that provides more detailed information than the current help modals.'
+        }
+    },
     {
         id: 'v2.1.2.1', version: 'v2.1.2.1', date: '2026-05-17',
         title: { ja: 'アップデートログページの追加', en: 'Addition of an Update Log Page' },
@@ -865,6 +873,7 @@ document.getElementById('tutorial-start').addEventListener('click', () => {
     localStorage.setItem('seismo_tutorial_shown', '1');
     tutOverlay.classList.add('hidden'); checkUnreadCL();
 });
+document.getElementById('helppage-redirect').addEventListener('click', () => window.location.href = "/help");
 document.getElementById('help-btn').addEventListener('click', () => tutOverlay.classList.remove('hidden'));
 document.getElementById('request-btn').addEventListener('click', () => window.location.href = "/request");
 document.getElementById('list-btn').addEventListener('click', () => window.location.href = "/status");

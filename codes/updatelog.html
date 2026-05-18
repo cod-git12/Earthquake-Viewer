@@ -247,9 +247,29 @@
             status: "https://earthquake.5kaideta.cfd/status",
             thumb: "https://earthquake.5kaideta.cfd/ogp-thumbnail.png",
             fav: "https://earthquake.5kaideta.cfd/favicon.ico",
+            update: "https://earthquake.5kaideta.cfd/update",
+            help: "https://earthquake.5kaideta.cfd/help",
+            github: "https://github.com/cod-git12/Earthquake-Viewer",
+            githubpages: "https://cod-git12.github.io/Earthquake-Viewer"
         };
 
         const updateLogs = [
+            {
+                version: "v2.1.3",
+                date: "2026.05.18",
+                changes: [
+                    {
+                        type: "new",
+                        en: "We have added a detailed <link help> help documentation page </link>. This page covers more specific usage details that are not included in the help modal on the homepage. Accordingly, we have added a link button to the help page within the help modal.",
+                        ja: "詳細な<link help>ヘルプドキュメントページ</link>を追加しました。ここではトップページのヘルプモーダルに載せられていない細かい使い方を載せています。それに伴い、ヘルプページへのリンクボタンをヘルプモーダルに追加しました。",
+                    },
+                    {
+                        type: "imp",
+                        en: "We have published the complete SEISMO code on <link github>GitHub</link>. We have also removed the SEISMO system from <link githubpages>GitHub Pages</link>, which was previously available there, and set it to redirect to the <link top>homepage</link>.",
+                        ja: "<link github>Github</link>にSEISMOの全体のコードを公開しました。そして、以前公開していた<link githubpages>Github Pages</link>内のSEISMOシステムを削除し、<link top>トップページ</link>にリダイレクトするようにしました。"
+                    }
+                ]
+            },
             {
                 version: "v2.1.2.1",
                 date: "2026.05.17",
@@ -257,7 +277,7 @@
                     {
                         type: "new",
                         en: "We have added a detailed update log page. Here, we will post minor updates that are not included in the main update log.",
-                        ja: "詳細なアップデートログページを追加しました。ここではアップデートログに載せないような細かなアップデートを載せていきます。",
+                        ja: "詳細な<link update>アップデートログページ<link>を追加しました。ここではアップデートログに載せないような細かなアップデートを載せていきます。",
                     },
                     {
                         type: "imp",

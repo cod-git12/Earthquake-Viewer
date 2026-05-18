@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="SEISMO — SYSTEM DOCUMENTATION | 5kaideta.cfd">
+    <meta property="og:site_name" content="SEISMO — 取扱説明書">
+    <meta property="og:description" content="リアルタイム地震情報モニター「SEISMO」の機能、操作方法、システム構成に関する詳細ドキュメントです。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://earthquake.5kaideta.cfd/help">
+    <meta property="og:image" content="https://earthquake.5kaideta.cfd/ogp-thumbnail.png">
+    <meta property="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>SEISMO — SYSTEM DOCUMENTATION | 5kaideta.cfd</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030507;
+            --accent: #00f2ff;
+            --bg-card: #0b0f18;
+            --border: #161c28;
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        h1 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2rem;
+            margin: 0;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .version-node {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .lang-switch {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            border-radius: 3px;
+        }
+
+        .lang-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .lang-btn.active {
+            border-color: var(--accent);
+            background: rgba(0, 242, 255, 0.05);
+            color: var(--accent);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.1);
+        }
+
+        .back-link {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--accent);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+            transition: opacity 0.2s;
+        }
+
+        .back-link:hover {
+            opacity: 0.8;
+        }
+
+        .help-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .help-card h2 {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--accent);
+            margin: 0 0 15px 0;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 1px;
+        }
+
+        .help-card p {
+            margin: 0 0 15px 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #94a3b8;
+        }
+
+        .help-list {
+            margin: 10px 0 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .help-list li {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+            line-height: 1.5;
+        }
+
+        .help-list li::before {
+            content: "■";
+            color: var(--accent);
+            font-size: 0.75rem;
+            position: absolute;
+            left: 0;
+            top: 2px;
+        }
+
+        .help-list li strong {
+            color: var(--accent);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        .code-span {
+            background: #030507;
+            border: 1px solid var(--border);
+            color: #ff79c6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .color-item {
+            background: #030507;
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+        }
+
+        footer {
+            margin-top: 40px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+            text-align: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            body {
+                padding: 20px 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Monitor</a>
+
+        <header>
+            <div>
+                <h1 id="title-text">System Documentation</h1>
+                <div class="version-node">Node env: Secure production / ver: v2.1.3</div>
+            </div>
+            <div class="lang-switch">
+                <button id="btn-ja" class="lang-btn active" onclick="setLang('ja')">JA</button>
+                <button id="btn-en" class="lang-btn" onclick="setLang('en')">EN</button>
+            </div>
+        </header>
+
+        <main id="help-content">
+        </main>
+
+        <footer>
+            &copy; 2026 5kaideta.cfd / 5kaideta-yuuto. All Rights Reserved.
+        </footer>
+    </div>
+
+    <script>
+        let currentLang = localStorage.getItem('seismo_lang') || 'ja';
+
+        const i18n = {
+            ja: {
+                coreTitle: "📡 リアルタイム同期コア",
+                coreDesc: "SEISMOはWebSocket通信パイプラインを介して、気象庁発表の生データを処理する「P2P地震情報 JSON API」と常時双方向接続を行っています。地震発生データがネットワークを流れた瞬間に検知し、ブラウザ側を完全ノンリフレッシュでリアルタイム同期・即座に可視化します。",
+
+                mapTitle: "🗺️ 高精度マップエンジン (Leaflet.js)",
+                mapDesc: "地図画面は高精度の地理ベクトルデータを高速描画するLeaflet.jsを採用。ドラッグ、拡大・縮小（ズーム）の追従はもちろん、以下の特殊レイヤーを搭載しています。",
+                mapList: `
+                    <li><strong>細分区域（震央地名）描画:</strong> 地震速報で使われる日本国内の精密な「区域の境界線」を視覚的にマッピングします。</li>
+                    <li><strong>都道府県境界線:</strong> 震度の広がりを把握しやすいよう、国内各自治体の境界オーバーレイを常時透過プロット。</li>
+                    <li><strong>P波・S波シミュレーション:</strong> 震源検知時、震源地から周囲に拡大する主要動・初期微動の予測波紋アニメーションを展開します。</li>
+                `,
+
+                filterTitle: "🎛️ 動的ハードウェア・フィルタリング",
+                filterDesc: "コントロールパネルの物理スライダーやトグルチップを操作することで、膨大な地震履歴データから目的のログのみを瞬時に抽出します。",
+                filterList: `
+                    <li><strong>最大震度フィルター:</strong> 震度1から震度7までのスケールでマップ上のピンと左側データリストを同期絞り込み。</li>
+                    <li><strong>マグニチュード (M):</strong> 規模の大きさに応じたリニアフィルター。</li>
+                    <li><strong>震源の深さ:</strong> 浅発地震から深発地震までをレンジ指定。条件を満たさない過去のデータはバックグラウンドで自動的に非表示化されます。</li>
+                `,
+
+                reqTitle: "🛡️ 未登録地点リクエスト・エコシステム",
+                reqDesc: "マップの精度を極限まで高めるため、ユーザー参加型のフィードバック補正システムを構築しています。",
+                reqList: `
+                    <li><strong>地点申請フォーム (<span class="code-span">request.html</span>):</strong> 地図上にプロットされていない最新の気象庁観測点や自治体の補足情報を暗号化シード申請。</li>
+                    <li><strong>公開進捗ステータス (<span class="code-span">status.html</span>):</strong> 送信したリクエストが現在処理中（PENDING）か、反映完了（RESOLVED）かをリアルタイムで追跡。</li>
+                    <li><strong>管理者防衛システム (<span class="code-span">admin.html</span>):</strong> 管理ダッシュボードはSupabase Auth (JWTトークン) とデータベース層のRLS (Row Level Security) により最高峰の堅牢性で保護されており、DevTools等による外部からの不正な書き換え、アタックを100%遮断しています。</li>
+                `,
+
+                colorTitle: "📊 システムカラー・インデックス（最大震度）",
+                colorDesc: "発生した地震の最大脅威度を直感的に検知できるよう、ヘッダーのCanvas波形、アラートパネル、UI全体のテーマネオンカラーが最高震度に応じて動的にパルス・カラーチェンジします。",
+                color1: "震度 1",
+                color2: "震度 2",
+                color3: "震度 3",
+                color4: "震度 4",
+                color5jaku: "震度 5弱",
+                color5kyou: "震度 5強",
+                color6jaku: "震度 6弱",
+                color6kyou: "震度 6強",
+                color7: "震度 7",
+            },
+            en: {
+                coreTitle: "📡 Real-Time Sync Cluster",
+                coreDesc: "SEISMO establishes a continuous, bidirectional pipeline via WebSockets directly into the P2P Earthquake JSON API. The engine immediately sniffs telemetry at the packet level concurrent with active seismic events, enabling full zero-refresh data injection and instantaneous visualization.",
+
+                mapTitle: "🗺️ High-Performance Map Engine (Leaflet.js)",
+                mapDesc: "Leveraging the Leaflet.js runtime for ultra-low latency vector rendering. Supports fully unconstrained panning and scaling alongside these critical operational layers:",
+                mapList: `
+                    <li><strong>Sub-Prefecture Borders:</strong> Accurately overlays JMA structural epicenter zones onto the geodetic mesh.</li>
+                    <li><strong>Prefectural Boundaries:</strong> Renders a highly transparent, anti-aliased administrative boundary layer to analyze intensity propagation.</li>
+                    <li><strong>P/S Wave Simulation:</strong> Upon notification, dynamically traces growing primary (P-wave) and secondary (S-wave) kinetic fields from the epicenter matrix.</li>
+                `,
+
+                filterTitle: "🎛️ Dynamic Hardware Metric Filtering",
+                filterDesc: "Manipulating the continuous sliders or control chip matrices instantly truncates the structural database cache to match your active parameters.",
+                filterList: `
+                    <li><strong>Max Intensity:</strong> Synchronizes both the spatial markers and the left-side timeline stream across the JMA scale (1 to 7).</li>
+                    <li><strong>Magnitude (M):</strong> Filters active clusters linear to raw seismic energy output.</li>
+                    <li><strong>Focal Depth:</strong> Constraints bounds anywhere from shallow crustal failures to high-depth mantle anomalies. Out-of-bound logs are automatically culled.</li>
+                `,
+
+                reqTitle: "🛡️ Crowdsourced Request Architecture",
+                reqDesc: "Features a synchronized user feedback submission architecture to maintain structural and topographical accuracy over the mapping nodes.",
+                reqList: `
+                    <li><strong>Intake Registry (<span class="code-span">request.html</span>):</strong> Grants users localized submission privileges for reporting unregistered JMA observation telemetry or new municipal nodes.</li>
+                    <li><strong>Lifecycle Tracker (<span class="code-span">status.html</span>):</strong> A live dashboard exposing step-by-step verification flows (PENDING / RESOLVED) for active tickets.</li>
+                    <li><strong>Hardened Core Dashboard (<span class="code-span">admin.html</span>):</strong> The admin console utilizes Supabase Auth cryptographic JWT tokens coupled with PostgreSQL RLS (Row Level Security). External script injections or client-side DevTools modifications are rejected 100% by the cloud kernel.</li>
+                `,
+
+                colorTitle: "📊 Seismic Color Index (Max Threat Level)",
+                colorDesc: "To ensure instantaneous situational awareness, the application's header Canvas waveform, warning modals, and accent lines automatically shift frequencies to isolate threats based on the maximum recorded intensity.",
+                color1: "Intensity 1",
+                color2: "Intentisy 2",
+                color3: "Intensity 3",
+                color4: "Intensity 4",
+                color5jaku: "Intensity 5-",
+                color5kyou: "Intensity 5+",
+                color6jaku: "Intensity 6-",
+                color6kyou: "Intensity 6+",
+                color7: "Intensity 7",
+            }
+        };
+
+        function renderHelp() {
+            const content = document.getElementById('help-content');
+            const data = i18n[currentLang];
+
+            content.innerHTML = `
+                <div class="help-card">
+                    <h2>${data.coreTitle}</h2>
+                    <p>${data.coreDesc}</p>
+                </div>
+
+                <div class="help-card">
+                    <h2>${data.mapTitle}</h2>
+                    <p>${data.mapDesc}</p>
+                    <ul class="help-list">${data.mapList}</ul>
+                </div>
+
+                <div class="help-card">
+                    <h2>${data.filterTitle}</h2>
+                    <p>${data.filterDesc}</p>
+                    <ul class="help-list">${data.filterList}</ul>
+                </div>
+
+                <div class="help-card">
+                    <h2>${data.reqTitle}</h2>
+                    <p>${data.reqDesc}</p>
+                    <ul class="help-list">${data.reqList}</ul>
+                </div>
+
+                <div class="help-card" style="border-left-color: #ef4444;">
+                    <h2>${data.colorTitle}</h2>
+                    <p>${data.colorDesc}</p>
+                    <div class="color-grid">
+                        <div class="color-item"><span class="color-indicator" style="background:#9ec5fe;"></span>${data.color1}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#60a5fa;"></span>${data.color2}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#4ade80;"></span>${data.color3}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#facc15;"></span>${data.color4}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#fb923c;"></span>${data.color5jaku}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#f97316;"></span>${data.color5kyou}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#ef4444;"></span>${data.color6jaku}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#dc2626;"></span>${data.color6kyou}</div>
+                        <div class="color-item"><span class="color-indicator" style="background:#cc44ff;"></span>${data.color7}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('title-text').innerText = currentLang === 'ja' ? 'SYSTEM DOCUMENTATION / 取扱説明書' : 'SYSTEM DOCUMENTATION';
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('seismo_lang', lang);
+            document.documentElement.lang = lang;
+
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+            document.getElementById('btn-ja').classList.toggle('active', lang === 'ja');
+
+            renderHelp();
+        }
+
+        setLang(currentLang);
+    </script>
+</body>
+
+</html>
