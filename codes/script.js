@@ -767,6 +767,35 @@ function showAlert(q) {
 }
 
 let ws;
+let wsWolfx;
+let wsWolfxRetryDelay = 2000;
+
+function triggerEEW() {
+    const ov = document.createElement('div'); ov.className = 'eew-flash';
+    document.body.appendChild(ov); setTimeout(() => ov.remove(), 3200);
+    addHdrSpike(7);
+    addSeismoSpike(7);
+    flashDetectionBadge();
+}
+
+function connectWolfx() {
+    if (wsWolfx && (wsWolfx.readyState === WebSocket.OPEN || wsWolfx.readyState === WebSocket.CONNECTING)) return;
+    wsWolfx = new WebSocket('wss://api.wolfx.jp/v1/ws');
+    wsWolfx.onopen = () => { wsWolfxRetryDelay = 2000; };
+    wsWolfx.onmessage = ev => {
+        try {
+            const d = JSON.parse(ev.data);
+            if (d.type === 'eew') triggerEEW();
+        } catch (e) { }
+    };
+    wsWolfx.onclose = () => {
+        setTimeout(() => {
+            wsWolfxRetryDelay = Math.min(wsWolfxRetryDelay * 1.6, 30000);
+            connectWolfx();
+        }, wsWolfxRetryDelay);
+    };
+}
+
 function connectWS() {
     setWS('wait');
     ws = new WebSocket(WS_URL);
@@ -780,11 +809,7 @@ function connectWS() {
         try {
             const d = JSON.parse(ev.data);
             if (d.code === 551) { const q = processQ(d, true); if (q) { renderList(); renderMiniList(); updateStats(); } }
-            else if (d.code === 554) {
-                const ov = document.createElement('div'); ov.className = 'eew-flash';
-                document.body.appendChild(ov); setTimeout(() => ov.remove(), 3200);
-                addHdrSpike(7);
-            }
+            else if (d.code === 554) { triggerEEW(); }
         } catch (e) { }
     };
 }
